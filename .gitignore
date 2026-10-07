@@ -1,0 +1,11 @@
+__pycache__/
+*.db
+.pytest_cache/
+
+.vercel
+.env*
+
+# local tooling
+.claude/
+.agents/
+skills-lock.json
