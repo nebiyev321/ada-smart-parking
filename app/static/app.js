@@ -120,6 +120,7 @@ async function render() {
   if (!token) return renderLogin();
   try { me = await api("/me"); } catch (e) { if (token) showError(e); return; }
   if (seq !== renderSeq) return;
+  delete document.body.dataset.screen;
   $("#who").innerHTML = `<span>${esc(me.user.full_name)}</span>
     <span class="role">${esc(cap(me.user.affiliation))}</span>
     ${me.roles.map(r => `<span class="role extra">${esc(cap(words(r)))}</span>`).join("")}
@@ -141,24 +142,27 @@ window.addEventListener("hashchange", () => { render(); $("#view").focus({ preve
 
 async function renderLogin() {
   $("#who").innerHTML = ""; $("#nav").hidden = true; document.title = "Sign in · ADA Smart Parking";
-  let users;
+  document.body.dataset.screen = "login";
+  let users = null;
   try { users = await api("/auth/demo-users"); }
-  catch (e) {
-    $("#view").innerHTML = `<div class="card"><h2>Sign in</h2><p>${e.status === 404
-      ? "Sign in through MyADA to manage your parking permit."
-      : esc(e.message)}</p>${e.status === 404 ? "" : `<button type="button" data-action="retry">Try again</button>`}</div>`;
-    return;
-  }
-  const what = u => u.roles ? cap(u.roles.split(",").map(words).join(" and ")) : "Vehicle owner";
-  $("#view").innerHTML = `<div class="card">
-    <h2>Sign in with your ADA account</h2>
-    <p class="muted">This prototype stands in for MyADA single sign-on. Choose a demo account to see what that person sees.</p>
-    <div class="accounts">${users.map(u => `<button type="button" class="account" data-action="login" data-id="${esc(u.myada_user_id)}">
-      <strong>${esc(u.full_name)}</strong>
-      <span class="what">${esc(what(u))}</span>
-      <span class="muted">${esc(cap(u.affiliation))}, ID ${esc(u.myada_user_id)}</span>
-    </button>`).join("")}</div></div>`;
+  catch (e) { if (e.status !== 404) { showError(e); return; } }
+  const demos = (users || []).map(u => `<button type="button" class="login-chip" data-action="login" data-id="${esc(u.myada_user_id)}">${esc(u.full_name)} · ${esc(u.myada_user_id)}</button>`).join("");
+  $("#view").innerHTML = `<div class="login-screen"><form id="login-form" class="login-card" novalidate>
+    <div class="login-mark">MyADA<span>SMART PARKING</span></div>
+    <h2>Sign in to your account</h2>
+    <div class="login-err" role="alert"></div>
+    <div class="login-field"><input id="login-user" name="username" type="text" placeholder="Username"
+      autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required></div>
+    <div class="login-field"><input id="login-pass" name="password" type="password" placeholder="Password" autocomplete="current-password"></div>
+    <button type="submit" class="login-submit">Sign in</button>
+    <a class="login-forgot" href="https://online.ada.edu.az/password" target="_blank" rel="noopener">Forgot your password?</a>
+    ${demos ? `<div class="login-demos"><p>Prototype — this stands in for MyADA single sign-on. Pick a demo account:</p>${demos}</div>` : ""}
+  </form></div>`;
+  const form = $("#login-form");
+  if (form) form.onsubmit = e => { e.preventDefault(); ACTIONS.login($(".login-submit", form)).catch(x => { if (x.message !== "Signed out") loginError(x.message); }); };
 }
+
+function loginError(msg) { const el = $(".login-err"); if (el) el.textContent = msg; }
 
 const vehicleForm = (id, submit) => `<form id="${id}" novalidate>
   <div class="grid">
@@ -389,7 +393,10 @@ async function runLog() {
 // Actions that need a reason or a confirmation.
 const ACTIONS = {
   async login(b) {
-    const r = await api("/auth/mock-login", { method: "POST", body: { myada_user_id: b.dataset.id } });
+    const id = b.dataset.id || document.getElementById("login-user")?.value.trim();
+    if (!id) { loginError("Enter your username."); document.getElementById("login-user")?.focus(); return; }
+    loginError("");
+    const r = await api("/auth/mock-login", { method: "POST", body: { myada_user_id: id } });
     token = r.token; setStore(token);
     if (location.hash) history.replaceState(null, "", location.pathname);
     await render(); $("#view").focus({ preventScroll: true });
