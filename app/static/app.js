@@ -146,21 +146,41 @@ async function renderLogin() {
   let users = null;
   try { users = await api("/auth/demo-users"); }
   catch (e) { if (e.status !== 404) { showError(e); return; } }
-  const demos = (users || []).map(u => `<button type="button" class="login-chip" data-action="login" data-id="${esc(u.myada_user_id)}">${esc(u.full_name)} · ${esc(u.myada_user_id)}</button>`).join("");
-  $("#view").innerHTML = `<div class="login-screen"><form id="login-form" class="login-card" novalidate>
-    <div class="login-mark"><img src="/static/ada-mark.svg" alt="ADA" width="150" height="97"><span>SMART PARKING</span></div>
-    <h2>Sign in to your account</h2>
-    <div class="login-err" role="alert"></div>
-    <div class="login-field"><input id="login-user" name="username" type="text" placeholder="Username"
-      autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required></div>
-    <div class="login-field"><input id="login-pass" name="password" type="password" placeholder="Password" autocomplete="current-password"></div>
-    <button type="submit" class="login-submit">Sign in</button>
-    <a class="login-forgot" href="https://online.ada.edu.az/password" target="_blank" rel="noopener">Forgot your password?</a>
-    ${demos ? `<div class="login-demos"><p>Prototype — this stands in for MyADA single sign-on. Pick a demo account:</p>${demos}</div>` : ""}
-  </form></div>`;
+  const demos = (users || []).map(u => {
+    const roles = (u.roles || "").split(",").filter(Boolean);
+    const tags = roles.length ? roles.map(r => ROLE_TAG[r] || cap(words(r))) : [cap(u.affiliation)];
+    return `<button type="button" class="demo" data-action="login" data-id="${esc(u.myada_user_id)}">
+      <span class="demo-name">${esc(u.full_name)}</span><span class="demo-id">${esc(u.myada_user_id)}</span>
+      <span class="demo-roles">${tags.map(t => `<span class="demo-role${roles.length ? " staff" : ""}">${esc(t)}</span>`).join("")}</span></button>`;
+  }).join("");
+  const now = new Date(), y = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+  $("#view").innerHTML = `<div class="signin"><div class="tag${swung ? "" : " swing"}">
+    <form id="login-form" class="tag-main" novalidate>
+      <div class="tag-head"><img src="/static/ada-mark.svg" alt="ADA University" width="92" height="59">
+        <span class="tag-name">SMART PARKING</span><span class="tag-year">${y}/${String(y + 1).slice(2)}</span>
+        <span class="tag-serial">Campus parking permit</span></div>
+      <div class="tag-body">
+        <h1>Sign in</h1>
+        <p>Use your MyADA username and password.</p>
+        <div class="login-err" role="alert"></div>
+        <label class="field"><span>Username</span><input id="login-user" name="username" type="text"
+          autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required></label>
+        <label class="field"><span>Password</span><input id="login-pass" name="password" type="password" autocomplete="current-password"></label>
+        <button type="submit" class="tag-submit">Sign in</button>
+        <a class="tag-forgot" href="https://online.ada.edu.az/password" target="_blank" rel="noopener">Forgot your password?</a>
+      </div>
+    </form>
+    ${demos ? `<section class="tag-stub" aria-labelledby="stub-title">
+      <p class="stub-label" id="stub-title"><strong>Prototype:</strong> sign in as a demo account</p>
+      <div class="demo-list">${demos}</div></section>` : ""}
+  </div></div>`;
+  swung = true;
   const form = $("#login-form");
-  if (form) form.onsubmit = e => { e.preventDefault(); ACTIONS.login($(".login-submit", form)).catch(x => { if (x.message !== "Signed out") loginError(x.message); }); };
+  if (form) form.onsubmit = e => { e.preventDefault(); ACTIONS.login($(".tag-submit", form)).catch(x => { if (x.message !== "Signed out") loginError(x.message); }); };
 }
+
+let swung = false;
+const ROLE_TAG = { guard: "Guard", parking_admin: "Parking admin", system_admin: "System admin" };
 
 function loginError(msg) { const el = $(".login-err"); if (el) el.textContent = msg; }
 
@@ -394,9 +414,14 @@ async function runLog() {
 const ACTIONS = {
   async login(b) {
     const id = b.dataset.id || document.getElementById("login-user")?.value.trim();
-    if (!id) { loginError("Enter your username."); document.getElementById("login-user")?.focus(); return; }
-    loginError("");
-    const r = await api("/auth/mock-login", { method: "POST", body: { myada_user_id: id } });
+    const user = document.getElementById("login-user");
+    if (!id) { loginError("Enter your username."); user?.setAttribute("aria-invalid", "true"); user?.focus(); return; }
+    user?.removeAttribute("aria-invalid"); loginError("");
+    const stub = b.dataset.id && b.closest(".tag-stub");
+    stub?.classList.add("tearing");
+    let r;
+    try { r = await api("/auth/mock-login", { method: "POST", body: { myada_user_id: id } }); }
+    catch (x) { stub?.classList.remove("tearing"); throw x; }
     token = r.token; setStore(token);
     if (location.hash) history.replaceState(null, "", location.pathname);
     await render(); $("#view").focus({ preventScroll: true });

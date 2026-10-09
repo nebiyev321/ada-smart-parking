@@ -5,3 +5,6 @@ tests
 __pycache__
 .pytest_cache
 .env*
+.impeccable
+PRODUCT.md
+DESIGN.md
