@@ -8,4 +8,5 @@ __pycache__/
 # local tooling
 .claude/
 .agents/
+.vscode/
 skills-lock.json
