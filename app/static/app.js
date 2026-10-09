@@ -148,7 +148,7 @@ async function renderLogin() {
   catch (e) { if (e.status !== 404) { showError(e); return; } }
   const demos = (users || []).map(u => `<button type="button" class="login-chip" data-action="login" data-id="${esc(u.myada_user_id)}">${esc(u.full_name)} · ${esc(u.myada_user_id)}</button>`).join("");
   $("#view").innerHTML = `<div class="login-screen"><form id="login-form" class="login-card" novalidate>
-    <div class="login-mark">MyADA<span>SMART PARKING</span></div>
+    <div class="login-mark"><img src="/static/ada-mark.svg" alt="ADA" width="150" height="97"><span>SMART PARKING</span></div>
     <h2>Sign in to your account</h2>
     <div class="login-err" role="alert"></div>
     <div class="login-field"><input id="login-user" name="username" type="text" placeholder="Username"
