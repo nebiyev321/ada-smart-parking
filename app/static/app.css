@@ -217,78 +217,73 @@ td.actions-cell button { margin-left: 6px; }
 .result:first-child { border-top: 0; }
 .result > :last-child { margin-bottom: 0; }
 
-/* Sign-in: an ADA parking hang-tag hanging from the header band */
-body[data-screen="login"] { background: var(--paper); }
+/* Sign-in: mirrors the MyADA sign-in so it reads as part of ADA at first glance.
+   A slate panel on a woven slate ground; the panel is deepened from MyADA's so white text passes AA. */
+body[data-screen="login"] { --slate: #527a8e; --slate-ground: #a9bcc6; --field: #dfe7f3;
+  background-color: var(--slate-ground);
+  background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, .13) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(-45deg, rgba(40, 70, 85, .1) 0 1px, transparent 1px 3px); }
+body[data-screen="login"] .top { display: none; }
 body[data-screen="login"] main { max-width: none; margin: 0; padding: 0; }
-.signin { min-height: calc(100vh - 52px); min-height: calc(100dvh - 52px); display: flex; justify-content: center; align-items: flex-start; padding: 0 16px 48px; position: relative; }
-.signin::before { content: ""; position: absolute; z-index: 1; left: calc(50% - 1px); top: 0; width: 2px; height: calc(30px + 24px); background: #8a96aa; border-radius: 1px; }
-.tag { --hole: 24px; width: min(420px, 100%); position: relative; margin-top: 30px;
-  transform-origin: 50% var(--hole); filter: drop-shadow(0 10px 22px rgba(11, 61, 145, .16)) drop-shadow(0 2px 4px rgba(23, 32, 46, .1)); }
-.tag-main, .tag-stub { background: var(--surface); }
-/* Punched hanger hole, plus the half notches where the stub tears off */
-.tag-main { border-radius: 22px 22px 0 0; overflow: hidden;
-  -webkit-mask: radial-gradient(circle 9px at 50% var(--hole), transparent 8.5px, #000 9px),
-    radial-gradient(circle 10px at 0 100%, transparent 9.5px, #000 10px),
-    radial-gradient(circle 10px at 100% 100%, transparent 9.5px, #000 10px);
-  -webkit-mask-composite: source-in;
-  mask: radial-gradient(circle 9px at 50% var(--hole), transparent 8.5px, #000 9px),
-    radial-gradient(circle 10px at 0 100%, transparent 9.5px, #000 10px),
-    radial-gradient(circle 10px at 100% 100%, transparent 9.5px, #000 10px);
-  mask-composite: intersect; }
-.tag-head { background: var(--navy); color: #fff; text-align: center; padding: calc(var(--hole) + 16px) 24px 16px; }
-.tag-head img { display: block; width: 92px; height: auto; margin: 0 auto; }
-.tag-name { display: block; font-family: var(--plate-font); font-weight: 600; font-size: 1.3rem; letter-spacing: .24em; margin: 10px 0 0 .24em; }
-.tag-year { display: block; font-family: var(--plate-font); font-weight: 600; font-size: 3rem; line-height: 1; letter-spacing: .04em; margin-top: 12px; font-variant-numeric: tabular-nums; }
-.tag-serial { display: block; margin-top: 6px; font-size: .9rem; color: #d3ddf1; }
-.tag-body { padding: 20px 32px 22px; }
-.tag-body h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; letter-spacing: -.01em; }
-.tag-body > p { color: var(--muted); margin: 0 0 16px; }
-.tag-body .field { margin-bottom: 12px; }
-.tag-body .field > span { color: var(--ink); }
-.tag-body input { height: 44px; caret-color: var(--navy); }
-.tag-submit { width: 100%; min-height: 46px; margin-top: 4px; font-size: 1.05rem; }
-.tag-forgot { display: inline-block; margin-top: 12px; color: var(--navy); font-weight: 600; text-underline-offset: 3px; }
-.tag-forgot:hover { color: var(--navy-deep); }
-.login-err { background: var(--check-soft); color: var(--check); font-weight: 600; padding: 10px 12px; border-radius: 6px; margin: 0 0 14px; }
+.signin { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; padding: clamp(24px, 10vh, 100px) 16px 48px; }
+.signin-panel { width: min(462px, 100%); padding: 56px clamp(24px, 16%, 74px) 52px; text-align: center; color: #fff;
+  background: var(--slate) repeating-linear-gradient(45deg, rgba(255, 255, 255, .05) 0 1px, transparent 1px 3px);
+  border: 1px solid rgba(255, 255, 255, .7); box-shadow: 0 18px 40px -18px rgba(30, 55, 70, .45); }
+.signin-mark { display: block; width: 168px; height: auto; margin: 0 auto; }
+.signin-mark text { fill: #fff; font: 400 17px/1 Georgia, "Times New Roman", serif; letter-spacing: 3px; }
+.signin-product { margin: 14px 0 0; font-family: var(--plate-font); font-weight: 500; font-size: .95rem; letter-spacing: .32em; text-transform: uppercase; padding-left: .32em; }
+.signin-form { margin-top: 40px; display: grid; gap: 15px; }
+.signin-form input[type="text"], .signin-form input[type="password"] { height: 48px; border: 0; border-radius: 0; background: var(--field); color: #17202e;
+  text-align: center; font-size: 1.15rem; caret-color: var(--slate); }
+.signin-form input::placeholder { color: #52606d; opacity: 1; }
+.signin-form input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.signin-submit { height: 48px; background: transparent; border: 1px solid rgba(255, 255, 255, .9); border-radius: 0; color: #fff;
+  font-size: 1.15rem; font-weight: 400; letter-spacing: .04em; text-transform: uppercase; transition: background-color .15s; }
+.signin-submit:hover { background: rgba(255, 255, 255, .14); }
+.signin-submit:active:not(:disabled) { background: rgba(255, 255, 255, .22); }
+.signin-remember { display: inline-flex; align-items: center; justify-content: center; gap: 7px; margin-top: 2px; font-size: .9rem; cursor: pointer; }
+.signin-remember input { width: 15px; height: 15px; margin: 0; accent-color: #fff; }
+.signin-forgot { display: inline-block; margin-top: 18px; color: #fff; font-size: 1.15rem; letter-spacing: .02em; text-decoration: none; }
+.signin-forgot:hover { text-decoration: underline; text-underline-offset: 3px; }
+.login-err { background: #fdecea; color: var(--check); font-weight: 600; padding: 10px 12px; text-align: left; }
 .login-err:empty { display: none; }
-/* Tear-off stub with the demo accounts */
-.tag-stub { border-radius: 0 0 14px 14px; position: relative; padding: 16px 20px 18px; background: #f7f9fc;
-  -webkit-mask: radial-gradient(circle 10px at 0 0, transparent 9.5px, #000 10px),
-    radial-gradient(circle 10px at 100% 0, transparent 9.5px, #000 10px);
-  -webkit-mask-composite: source-in;
-  mask: radial-gradient(circle 10px at 0 0, transparent 9.5px, #000 10px),
-    radial-gradient(circle 10px at 100% 0, transparent 9.5px, #000 10px);
-  mask-composite: intersect;
-  transition: transform .22s cubic-bezier(.16, 1, .3, 1); transform-origin: 0 0; }
-.tag-stub::before { content: ""; position: absolute; left: 14px; right: 14px; top: 0; border-top: 2px dashed #c3cad6; }
-@media (pointer: fine) { .demo-list .demo { min-height: 40px; } }
-.tag-stub.tearing { transform: translateY(7px) rotate(.8deg); }
-.stub-label { margin: 2px 11px 8px; font-size: .9rem; color: var(--muted); }
-.stub-label strong { color: var(--ink); font-weight: 700; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Prototype only: demo accounts, plainly labelled, in the same slate language */
+.demo-panel { width: min(462px, 100%); margin-top: 18px; padding: 16px 18px 18px; background: rgba(255, 255, 255, .55); border: 1px solid rgba(255, 255, 255, .8); }
+.stub-label { margin: 0 4px 10px; font-size: .9rem; color: #2c3e48; }
+.stub-label strong { color: #17202e; font-weight: 700; }
 .demo-list { display: grid; gap: 2px; }
 .demo { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px; width: 100%; min-height: 44px; padding: 6px 10px;
-  text-align: left; background: transparent; border: 1px solid transparent; border-radius: 6px; color: var(--ink); font-weight: 400; }
-.demo:hover { background: #fff; border-color: var(--line); }
+  text-align: left; background: transparent; border: 1px solid transparent; border-radius: 0; color: var(--ink); font-weight: 400; }
+.demo:hover { background: #fff; border-color: rgba(82, 122, 142, .35); }
+.demo.picked { background: #fff; border-color: var(--slate); }
 .demo-name { font-weight: 600; line-height: 1.25; }
-.demo-id { grid-column: 1; font-size: .8rem; color: var(--muted); line-height: 1.2; }
+.demo-id { grid-column: 1; font-size: .8rem; color: #3f4d5a; line-height: 1.2; }
 .demo-roles { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 15rem; }
 .demo-role { font-family: var(--plate-font); font-weight: 600; font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap;
-  color: var(--navy); background: var(--navy-soft); border: 1px solid #c6d3ee; border-radius: 3px; padding: 1px 7px; }
+  color: #1f3f50; background: #e3ecf1; border: 1px solid #b5c8d2; padding: 1px 7px; }
 .demo-role.staff { color: var(--ink); background: #fff; border-color: #8a96aa; }
-/* Signature: the tag swings once from its hanger hole */
-@keyframes tag-swing { 0% { transform: rotate(-4.5deg); } 30% { transform: rotate(2.6deg); } 55% { transform: rotate(-1.2deg); } 78% { transform: rotate(.45deg); } 100% { transform: rotate(0); } }
-.tag.swing { animation: tag-swing .9s cubic-bezier(.3, .6, .4, 1) both; }
-@media (prefers-reduced-motion: reduce) { .tag.swing { animation: none; } .tag-stub { transition: none; } }
+@media (pointer: fine) { .demo-list .demo { min-height: 40px; } }
 @media (max-width: 480px) {
-  .tag { margin-top: 24px; }
-  .signin::before { height: calc(24px + 24px); }
-  .tag-body { padding: 20px 20px 22px; }
-  .tag-stub { padding: 14px 10px 14px; }
+  .signin { padding-top: 24px; }
+  .signin-panel { padding: 40px 22px 36px; }
+  .signin-form { margin-top: 30px; }
+  .demo-panel { padding: 14px 8px; }
 }
 @media (max-width: 400px) {
   .demo { grid-template-columns: 1fr; }
   .demo-roles { grid-column: 1; grid-row: auto; justify-content: flex-start; max-width: none; margin-top: 4px; }
 }
+/* The panel settles in once; on sign-in it lifts away before the app enters */
+@keyframes signin-in { from { opacity: 0; transform: translateY(12px); } }
+@keyframes signin-out { to { opacity: 0; transform: translateY(-10px) scale(.985); } }
+.signin-panel { animation: signin-in .5s var(--ease-out) both; }
+.demo-panel { animation: signin-in .5s .08s var(--ease-out) both; }
+.signin.unhook > * { animation: signin-out .3s var(--ease-in) forwards; }
+.signin.unhook > .demo-panel { animation-delay: 0s; }
+/* The owner's permit swings once from its hanger hole */
+@keyframes tag-swing { 0% { transform: rotate(-4.5deg); } 30% { transform: rotate(2.6deg); } 55% { transform: rotate(-1.2deg); } 78% { transform: rotate(.45deg); } 100% { transform: rotate(0); } }
 ::selection { background: #c6d3ee; color: var(--ink); }
 
 /* Messages, audit */
@@ -310,7 +305,7 @@ dialog::backdrop { background: rgba(23, 32, 46, .5); }
 dialog .actions { justify-content: flex-end; }
 
 /* Motion. Feedback stays fast (≤150ms), state changes 200–320ms, the authored moments
-   (tag swing, unhook, plate into verdict) up to 900ms. Content is visible by default;
+   (permit swing, sign-in lift, plate into verdict) up to 900ms. Content is visible by default;
    every movement below has a fade-only or static path under reduced motion. */
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
 @keyframes fade { from { opacity: 0; } }
@@ -323,8 +318,6 @@ dialog .actions { justify-content: flex-end; }
 @keyframes flash-check { from { background: var(--check-soft); } }
 @keyframes approved { 0% { background: var(--allow-soft); } 100% { background: var(--allow-soft); opacity: 0; transform: translateX(16px); } }
 /* Taking the permit off the hook: it lifts, then drops away as the app arrives */
-@keyframes unhook { 0% { transform: none; } 30% { transform: translateY(-10px) rotate(-1deg); } 100% { transform: translateY(70px) rotate(5deg); opacity: 0; } }
-@keyframes cord-go { to { transform: scaleY(0); } }
 @keyframes progress { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 
 /* Section entrance: header, then cards, then table rows, capped so nothing waits */
@@ -369,10 +362,6 @@ tr.fresh.check { animation: flash-check 1.8s ease-out; }
 tr.leaving { animation: slide-out .22s var(--ease-in) forwards; }
 tr.leaving.approved { animation: approved .32s var(--ease-in) forwards; }
 
-/* Sign-in tag unhooks on success */
-.signin.unhook .tag { animation: unhook .42s var(--ease-in) forwards; }
-.signin.unhook::before { transform-origin: 50% 0; animation: cord-go .3s .1s var(--ease-in) forwards; }
-
 /* My vehicle: the permit swings once from its hole, like the sign-in tag */
 .permit { transform-origin: 50% var(--hole); }
 .permit.swing { animation: tag-swing .9s cubic-bezier(.3, .6, .4, 1) both; }
@@ -385,8 +374,9 @@ dialog[open]::backdrop { animation: fade .2s ease-out; }
 
 @media (prefers-reduced-motion: reduce) {
   #view.enter > *, #view.enter tbody tr, .verdict, .verdict-word, dialog[open] { animation: fade .2s ease-out both; animation-delay: 0s; }
-  .signin.unhook .tag, .signin.unhook::before, tr.leaving, tr.leaving.approved { animation: appear .2s reverse forwards; }
-  .permit.swing, .tag.swing, .plate-input-box.nudge { animation: none; }
+  .signin-panel, .demo-panel { animation: fade .2s ease-out both; }
+  .signin.unhook > *, tr.leaving, tr.leaving.approved { animation: appear .2s reverse forwards; }
+  .permit.swing, .plate-input-box.nudge { animation: none; }
   button:active:not(:disabled), .demo:active { transform: none; }
   #toast, #toast.show { transform: translateX(-50%); }
   ::view-transition-group(nav-tab) { animation-duration: 0s; }

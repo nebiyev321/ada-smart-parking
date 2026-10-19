@@ -4,7 +4,8 @@
 
 const API = "/api/v1";
 let token = null;
-try { token = sessionStorage.getItem("token"); } catch { /* storage blocked */ }
+// "Remember me" keeps the token in localStorage; otherwise it lasts as long as the tab.
+try { token = sessionStorage.getItem("token") || localStorage.getItem("token"); } catch { /* storage blocked */ }
 let me = null;
 
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -74,7 +75,12 @@ function leave(el, cls = "leaving") {
   });
 }
 
-function setStore(v) { try { v ? sessionStorage.setItem("token", v) : sessionStorage.removeItem("token"); } catch { /* storage blocked */ } }
+function setStore(v, remember = false) {
+  try {
+    sessionStorage.removeItem("token"); localStorage.removeItem("token");
+    if (v) (remember ? localStorage : sessionStorage).setItem("token", v);
+  } catch { /* storage blocked */ }
+}
 
 function toast(msg, kind = "") {
   const t = $("#toast");
@@ -160,7 +166,7 @@ const TABS = [
 ];
 
 function signOut(message) {
-  token = null; me = null; setStore(null); swung = false; permitSwung = false;
+  token = null; me = null; setStore(null); permitSwung = false;
   if (location.hash) history.replaceState(null, "", location.pathname);
   render();
   if (typeof message === "string") toast(message);
@@ -231,33 +237,37 @@ async function renderLogin() {
       <span class="demo-name">${esc(u.full_name)}</span><span class="demo-id">${esc(u.myada_user_id)}</span>
       <span class="demo-roles">${tags.map(t => `<span class="demo-role${roles.length ? " staff" : ""}">${esc(t)}</span>`).join("")}</span></button>`;
   }).join("");
-  const now = new Date(), y = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
-  $("#view").innerHTML = `<div class="signin"><div class="tag${swung ? "" : " swing"}">
-    <form id="login-form" class="tag-main" novalidate>
-      <div class="tag-head"><img src="/static/ada-mark.svg" alt="ADA University" width="92" height="59">
-        <span class="tag-name">SMART PARKING</span><span class="tag-year">${y}/${String(y + 1).slice(2)}</span>
-        <span class="tag-serial">Campus parking permit</span></div>
-      <div class="tag-body">
-        <h1>Sign in</h1>
-        <p>Use your MyADA username and password.</p>
+  $("#view").innerHTML = `<div class="signin">
+    <div class="signin-panel">
+      <svg class="signin-mark" viewBox="0 -18 312 219" role="img" aria-label="ADA University">
+        <defs><path id="mark-arc" d="M 33 132 A 128 128 0 0 1 289 132"/></defs>
+        <text dominant-baseline="middle"><textPath href="#mark-arc" startOffset="47%" text-anchor="end">UNİVERSİTET</textPath></text>
+        <text dominant-baseline="middle"><textPath href="#mark-arc" startOffset="53%" text-anchor="start">UNIVERSITY</textPath></text>
+        <image href="/static/ada-mark.svg" width="312" height="201"/>
+      </svg>
+      <p class="signin-product">Smart Parking</p>
+      <form id="login-form" class="signin-form" novalidate>
+        <h1 class="sr-only">Sign in to ADA Smart Parking</h1>
         <div class="login-err" role="alert"></div>
-        <label class="field"><span>Username</span><input id="login-user" name="username" type="text"
-          autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required></label>
-        <label class="field"><span>Password</span><input id="login-pass" name="password" type="password" autocomplete="current-password"></label>
-        <button type="submit" class="tag-submit">Sign in</button>
-        <a class="tag-forgot" href="https://online.ada.edu.az/password" target="_blank" rel="noopener">Forgot your password?</a>
-      </div>
-    </form>
-    ${demos ? `<section class="tag-stub" aria-labelledby="stub-title">
+        <label class="sr-only" for="login-user">MyADA username</label>
+        <input id="login-user" name="username" type="text" placeholder="Username" autocomplete="username"
+          autocapitalize="none" autocorrect="off" spellcheck="false" required>
+        <label class="sr-only" for="login-pass">Password</label>
+        <input id="login-pass" name="password" type="password" placeholder="Password" autocomplete="current-password">
+        <button type="submit" class="signin-submit">Sign in</button>
+        <label class="signin-remember"><input id="login-remember" type="checkbox"> Remember me on this computer</label>
+      </form>
+      <a class="signin-forgot" href="https://online.ada.edu.az/password" target="_blank" rel="noopener">Forgot your password?</a>
+    </div>
+    ${demos ? `<section class="demo-panel" aria-labelledby="stub-title">
       <p class="stub-label" id="stub-title"><strong>Prototype:</strong> sign in as a demo account</p>
       <div class="demo-list">${demos}</div></section>` : ""}
-  </div></div>`;
-  swung = true;
+  </div>`;
   const form = $("#login-form");
-  if (form) form.onsubmit = e => { e.preventDefault(); ACTIONS.login($(".tag-submit", form)).catch(x => { if (x.message !== "Signed out") loginError(x.message); }); };
+  if (form) form.onsubmit = e => { e.preventDefault(); ACTIONS.login($(".signin-submit", form)).catch(x => { if (x.message !== "Signed out") loginError(x.message); }); };
 }
 
-let swung = false, permitSwung = false;
+let permitSwung = false;
 const ROLE_TAG = { guard: "Guard", parking_admin: "Parking admin", system_admin: "System admin" };
 
 function loginError(msg) { const el = $(".login-err"); if (el) el.textContent = msg; }
@@ -523,12 +533,11 @@ const ACTIONS = {
     const user = document.getElementById("login-user");
     if (!id) { loginError("Enter your username."); user?.setAttribute("aria-invalid", "true"); user?.focus(); return; }
     user?.removeAttribute("aria-invalid"); loginError("");
-    const stub = b.dataset.id && b.closest(".tag-stub");
-    stub?.classList.add("tearing");
+    if (b.dataset.id) b.classList.add("picked");
     let r;
     try { r = await api("/auth/mock-login", { method: "POST", body: { myada_user_id: id } }); }
-    catch (x) { stub?.classList.remove("tearing"); throw x; }
-    token = r.token; setStore(token);
+    catch (x) { b.classList.remove("picked"); throw x; }
+    token = r.token; setStore(token, !!document.getElementById("login-remember")?.checked);
     if (location.hash) history.replaceState(null, "", location.pathname);
     await leave($(".signin"), "unhook");
     await render({ enter: true }); $("#view").focus({ preventScroll: true });

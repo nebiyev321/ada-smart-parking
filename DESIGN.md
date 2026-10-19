@@ -8,12 +8,14 @@ colors:
   navy-soft-line: "#c6d3ee"
   paper: "#f3f5f8"
   surface: "#ffffff"
-  stub-tint: "#f7f9fc"
   ink: "#17202e"
   muted: "#556072"
   line: "#d9dee7"
   field-stroke: "#b9c1ce"
   hanger-steel: "#8a96aa"
+  signin-slate: "#527a8e"
+  signin-ground: "#a9bcc6"
+  signin-field: "#dfe7f3"
   allow: "#12723c"
   allow-soft: "#e3f4ea"
   check: "#b42318"
@@ -191,19 +193,15 @@ components:
     backgroundColor: "{colors.navy-soft}"
     rounded: "{rounded.control}"
     padding: "12px 14px"
-  hang-tag-head:
-    backgroundColor: "{colors.navy}"
+  signin-panel:
+    backgroundColor: "{colors.signin-slate}"
     textColor: "{colors.surface}"
-    rounded: "{rounded.tag}"
-    width: "420px"
-  hang-tag-body:
-    backgroundColor: "{colors.surface}"
+    rounded: "0"
+    width: "462px"
+  signin-field:
+    backgroundColor: "{colors.signin-field}"
     textColor: "{colors.ink}"
-    padding: "20px 32px 22px"
-  hang-tag-stub:
-    backgroundColor: "{colors.stub-tint}"
-    rounded: "{rounded.stub}"
-    padding: "16px 20px 18px"
+    height: "48px"
   demo-row:
     textColor: "{colors.ink}"
     rounded: "{rounded.control}"
@@ -235,7 +233,7 @@ ADA Smart Parking looks like the paperwork of parking made trustworthy: a navy A
 
 Density is moderate and practical. Owners and admins read tables and cards on desktop and phone; guards act at the gate on a phone, so the gate-check surface goes large (2rem plate input, 56px gate buttons, 2rem verdict word). Colour carries meaning: navy is ADA and action, and three status hues (allow green, check red, wait amber) carry every state, always as a soft tint plus a strong ink, never as decoration.
 
-The signature is object fidelity. Plates follow the Azerbaijani national standard (AZS 599: flag, outlined AZ label, DIN-style characters centred in the field, bar separators); the sign-in card is a hang-tag with a punched hanger hole, side notches at the perforation, a dashed tear line and a tear-off stub. Motion is authored around these objects: the tag swings once from its hole, the stub tears when a demo account is picked, the tag unhooks and drops away on sign-in, the owner's permit swings once, and at the gate the typed plate flies into the verdict. Everything else moves only to acknowledge an action or explain a change of state.
+The signature is object fidelity. Plates follow the Azerbaijani national standard (AZS 599: flag, outlined AZ label, DIN-style characters centred in the field, bar separators); the sign-in mirrors the MyADA sign-in panel. Motion is authored around a few moments: the sign-in panel lifts away on sign-in, the owner's permit swings once, and at the gate the typed plate flies into the verdict. Everything else moves only to acknowledge an action or explain a change of state.
 
 **Key Characteristics:**
 - ADA navy band header; paper ground; flat white cards with hairline borders.
@@ -263,7 +261,6 @@ A restrained institutional palette: one brand blue, cool blue-grey neutrals, and
 ### Neutral
 - **Campus Paper** (paper): page ground behind cards and behind the hang-tag.
 - **Surface White** (surface): cards, inputs, dialogs, the tag body.
-- **Stub Tint** (stub-tint): the hang-tag's tear-off stub only, one step off white so the stub reads as a separate piece.
 - **Ink** (ink): body text, plate border and numerals, toast background.
 - **Slate** (muted): secondary text, field labels, table headers, inactive nav tabs.
 - **Hairline** (line): card borders, table rules, nav underline.
@@ -286,7 +283,7 @@ A restrained institutional palette: one brand blue, cool blue-grey neutrals, and
 - **Display** (Barlow SC 600, 3rem, line-height 1, tabular numerals): the permit year on the hang-tag head (e.g. 2026/27).
 - **Plate / Plate Large** (Barlow SC 600, 1.05rem or 2rem, 0.06em tracking): number-plate numerals; the large size on the gate check and its input (2rem, 0.08em, uppercase), shrinking to 1.6rem under 640px.
 - **Tag Mark** (Barlow SC 600, 1.3rem, 0.24em tracking, uppercase text): "SMART PARKING" on the tag head.
-- **Role Label** (Barlow SC 600, 0.74rem, 0.1em, uppercase): role plates in the demo stub.
+- **Role Label** (Barlow SC 600, 0.74rem, 0.1em, uppercase): role plates in the demo panel.
 - **Verdict** (Source Sans 3 700, 2rem, line-height 1.1): "Allow" / "Check the driver" at the gate, sentence case.
 - **Headline** (700, 1.5rem, -0.01em): the sign-in heading.
 - **Title** (700, 1.25rem): card headings (h2). **Subtitle** (600, 1.05rem): h3.
@@ -303,14 +300,14 @@ A single centred column: `main` is capped at 1000px with a 16px side gutter, 24p
 
 Tables collapse below 640px into stacked records: the header row is hidden, each cell becomes a two-column grid (7.5em label from `data-label`, then value), and action buttons left-align.
 
-The sign-in screen drops the column: the tag hangs centred from the header band, `min(420px, 100%)` wide with a 16px gutter, 30px below the band (24px under 480px), its cord drawn from the band to the hanger hole. Under 480px the tag body padding narrows to 20px and the stub to 10px; under 400px demo rows stack their role plates under the name. On fine pointers demo rows may shrink to 40px; touch keeps 44px.
+The sign-in screen drops the column and the header band: the MyADA-style panel is centred, `min(462px, 100%)` wide with a 16px gutter, 10vh from the top (24px on phones), with the demo panel 18px below it. Under 480px the panel padding narrows to 22px; under 400px demo rows stack their role plates under the name. On fine pointers demo rows may shrink to 40px; touch keeps 44px.
 
 ## Elevation & Depth
 
 Flat by default. Cards, inputs, tables, nav and the header band carry no shadow; depth comes from the paper ground against white surfaces and 1px hairlines. Shadows appear only on things that physically float above the page.
 
 ### Shadow Vocabulary
-- **Hanging tag** (`filter: drop-shadow(0 10px 22px rgba(11,61,145,.16)) drop-shadow(0 2px 4px rgba(23,32,46,.1))`): the hang-tag only. A drop-shadow filter so the shadow follows the masked silhouette, hole and notches included.
+- **Hanging permit** (`filter: drop-shadow(0 10px 22px rgba(11,61,145,.16)) drop-shadow(0 2px 4px rgba(23,32,46,.1))`): the owner's permit tag only. A drop-shadow filter so the shadow follows the masked silhouette, hole and notches included.
 - **Toast** (`box-shadow: 0 6px 24px rgba(23,32,46,.25)`): the transient toast.
 - **Dialog** (`box-shadow: 0 20px 60px rgba(23,32,46,.35)`): modal dialogs, over a 50% Ink backdrop.
 
@@ -372,17 +369,19 @@ An 8px-radius panel with an 8px left rule in the verdict colour, soft tint fill,
 ### Tables
 Full-width, collapsed borders, 0.95rem; 10px 8px cells with hairline rules; Slate 0.85rem headers; actions right-aligned. Below 640px they become labelled stacked records (see Layout).
 
-### Permit Hang-tag (signature, sign-in)
-The sign-in card is an ADA parking hang-tag hanging on a 2px Hanger Steel cord from the header band.
-- **Head:** ADA Navy with the punched hanger hole, the white ADA logomark (92px), the Tag Mark "SMART PARKING", the permit year in Display type (academic year, rolling over in July), and "Campus parking permit" in a pale navy-tinted white.
-- **Body:** white, 20px 32px 22px padding: Headline "Sign in", one Slate line, Username and Password fields (44px tall, Ink labels, navy caret), a full-width 46px primary button, and a navy underlined "Forgot your password?" link.
-- **Stub:** present only when demo login is on. Stub Tint, notched and dashed at the perforation, 14px bottom corners. A Slate label with a bold Ink "Prototype:" lead-in, then demo rows: transparent 6px rows (44px) that turn white with a hairline on hover, name in 600, ID in 0.8rem Slate, role plates right-aligned. Affiliation plates (Student, Faculty) are Navy Mist with navy text; staff role plates (Guard, Parking admin, System admin) are white with Ink text and a Hanger Steel border.
-- **Motion:** on first render the tag swings once about its hanger hole (rotate -4.5deg to 2.6, -1.2, 0.45, 0 over 0.9s, `cubic-bezier(.3,.6,.4,1)`), then never again in the session. Picking a demo row tears the stub (translateY 7px, rotate 0.8deg, 0.22s `cubic-bezier(.16,1,.3,1)`), reverting if sign-in fails. Both are off under `prefers-reduced-motion`.
+### MyADA Sign-in
+The sign-in mirrors the MyADA sign-in page so it reads as part of ADA at first glance; the header band is hidden on this screen.
+- **Ground:** Slate Ground `#a9bcc6` with a woven 45/-45 degree 1px texture.
+- **Panel:** `min(462px, 100%)`, Slate `#527a8e` (deepened from MyADA so white text passes AA at 4.6:1), a 1px 70% white border, square corners, a soft offset shadow. Centred, 10vh from the top (24px on phones).
+- **Crest:** the ADA logomark with "UNİVERSİTET" and "UNIVERSITY" set on an arc through the mark's star (serif, 17 units, 3 letter-spacing), then "SMART PARKING" in Barlow 500, 0.32em tracking, so it never passes for MyADA itself.
+- **Form:** fields 48px, Field `#dfe7f3`, centred text, placeholders as the visible labels (screen-reader labels behind them); SIGN IN as a 1px white outline that fills 14% white on hover; "Remember me on this computer" keeps the session in localStorage instead of the tab; "Forgot your password?" links to ADA's password page.
+- **Demo panel:** only when demo login is on, below the sign-in panel: 55% white with a white border, a bold "Prototype:" label, then demo rows with role plates. A picked row turns white with a Slate border while signing in.
+- **Motion:** the panels rise 12px and fade in once (0.5s, demo panel 80ms later); on sign-in they lift 10px and fade out (0.3s) before the app enters.
 
 ### Motion
 Feedback 100–150ms, state changes 200–320ms, authored moments up to 900ms; arrivals use `cubic-bezier(.16,1,.3,1)`, exits `cubic-bezier(.7,0,.84,0)` and run faster.
 - **Section change:** the paper nav tab slides to the new section at once (View Transition on the tab only); content rises 8px and fades over 0.32s, staggered 40ms per block and capped, with table rows capped at five steps.
-- **Sign-in:** the tag lifts 10px and drops away (0.42s) while its cord retracts, then the app enters.
+- **Sign-in:** the panels lift 10px and fade (0.3s), then the app enters.
 - **Gate:** the verdict fades in over 0.12s, the verdict word stamps (scale 1.18 to 1), and the typed plate flies from the input into the verdict (FLIP, 0.42s). The new movement row flashes its status tint for 1.8s. An empty submit shakes the plate input once.
 - **Approvals:** a handled row tints and slides out (0.22–0.32s) before the list refreshes.
 - **Controls:** buttons scale to 0.97 on press; busy buttons show a spinner after 150ms. A response slower than 180ms shows a thin bar along the top edge.
@@ -400,12 +399,11 @@ The toast is an Ink pill-ish block (8px) centred 20px from the bottom, fading in
 - **Do** render plate numbers with the plate component, never as plain text in the Plate font.
 - **Do** keep Barlow Semi Condensed to stamped codes (plates, permit year, tag mark, role plates), tracked, at 600.
 - **Do** give every interactive element the 3px Focus Amber ring and touch rows at least 44px.
-- **Do** label demo affordances as prototype ("Prototype: sign in as a demo account") and keep them in the stub, below the real sign-in.
+- **Do** label demo affordances as prototype ("Prototype: sign in as a demo account") and keep them in their own panel, below the real sign-in.
 - **Do** give every movement a fade-only or static path under `prefers-reduced-motion`, keeping feedback legible.
 
 ### Don't:
-- **Don't** recreate the old MyADA teal sign-in or move off ADA navy; the app has its own world.
-- **Don't** put the sign-in on a floating white rectangle over a gradient; it is the hang-tag.
+- **Don't** move the signed-in app off ADA navy; only the sign-in screen uses the MyADA slate.
 - **Don't** use the flag colours as UI colours, or draw the plate with an EU-style blue strip or with spaces or font hyphens between the groups.
 - **Don't** add shadows to cards, inputs or panels; shadows are for the hanging tag, toasts and dialogs.
 - **Don't** call a gate verdict "denied" or "blocked"; the vocabulary is "Allow" and "Check the driver", because the gate never auto-blocks.
