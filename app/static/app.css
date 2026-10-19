@@ -9,7 +9,6 @@
   --ui: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
   --plate-font: "Barlow Semi Condensed", "Arial Narrow", sans-serif;
   /* Real plates use DIN 1451 Mittelschrift; Bahnschrift is DIN 1451 and ships with Windows */
-  --din: "Bahnschrift", "D-DIN", "DIN 1451", "Barlow Semi Condensed", "Arial Narrow", sans-serif;
   --ease-out: cubic-bezier(.16, 1, .3, 1);
   --ease-in: cubic-bezier(.7, 0, .84, 0);
 }
@@ -96,8 +95,9 @@ button:disabled { cursor: not-allowed; }
    7 apart, starting 88 from the left and ending 26 from the right; separators are 15 x 10 bars
    with 31 between groups. --u is one millimetre at the plate's rendered height. */
 .plate, .plate-input-box { --h: 30px; --u: calc(var(--h) / 110); --edge: calc(var(--u) * 3); --strip: max(1px, calc(var(--u) * 4.5)); }
-.plate { position: relative; display: inline-flex; align-items: center; height: var(--h);
-  padding: 0 calc(var(--u) * 26) 0 calc(var(--u) * 88); background: #fff; color: #111; vertical-align: middle; line-height: 1;
+/* Every plate is 520 wide; the characters are centred as one group in the field right of the flag band. */
+.plate { position: relative; display: inline-flex; align-items: center; justify-content: center; height: var(--h); width: calc(var(--u) * 520); flex: none;
+  padding: 0 calc(var(--u) * 14) 0 calc(var(--u) * 80); background: #fff; color: #111; vertical-align: middle; line-height: 1;
   border-radius: calc(var(--u) * 13); box-shadow: 0 0 0 1px #c3cad6; }
 .plate.lg { --h: 58px; }
 /* The black border strip sits inside the plate's white edge */
@@ -109,11 +109,12 @@ button:disabled { cursor: not-allowed; }
 /* RFID label (Figure 5 detail): white, thin black rounded outline, "AZ" 25 tall */
 .plate-az { position: absolute; left: calc(var(--u) * 16); bottom: calc(var(--u) * 17); width: calc(var(--u) * 58); height: calc(var(--u) * 44);
   display: grid; place-items: center; background: #fff; color: #111; border: max(.75px, calc(var(--u) * 1.8)) solid #111; border-radius: calc(var(--u) * 9);
-  font: 400 calc(var(--u) * 35)/1 var(--din); font-stretch: 87.5%; padding-top: calc(var(--u) * 2); }
-.plate-num { display: inline-flex; align-items: center; font: 500 calc(var(--u) * 108)/1 var(--din); font-stretch: 87.5%;
-  white-space: nowrap; padding-top: calc(var(--u) * 3); }
-.plate-num b { display: inline-block; width: calc(var(--u) * 45); text-align: center; font-weight: inherit; }
-.plate-num b + b { margin-left: calc(var(--u) * 7); }
+  font: 500 calc(var(--u) * 34)/1 var(--plate-font); text-box: trim-both cap alphabetic; }
+.plate-num { display: inline-flex; align-items: center; font: 500 calc(var(--u) * 92)/1 var(--plate-font);
+  white-space: nowrap; }
+/* Trimmed to cap height so flex centring centres the letters' ink, not the font's line box */
+.plate-num b { display: inline-block; font-weight: inherit; text-box: trim-both cap alphabetic; }
+.plate-num b + b { margin-left: calc(var(--u) * 5); }
 .plate-dash { flex: none; width: calc(var(--u) * 15); height: max(1.5px, calc(var(--u) * 10)); background: currentColor; margin: 0 calc(var(--u) * 8); }
 .vehicle { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; margin-bottom: 8px; }
 .vehicle .desc { font-weight: 600; }
@@ -129,7 +130,7 @@ button:disabled { cursor: not-allowed; }
   border-radius: calc(var(--u) * 13); box-shadow: 0 0 0 1px #c3cad6; }
 .plate-input-box:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; }
 .plate-input-box input { flex: 1; height: 100%; border: 0; border-radius: 0; min-width: 0; padding: calc(var(--u) * 4) 0 0; background: transparent;
-  font: 400 min(calc(var(--u) * 104), 11vw)/1 var(--din); font-stretch: 87.5%; letter-spacing: .02em; text-transform: uppercase; caret-color: var(--navy); }
+  font: 500 min(calc(var(--u) * 92), 10vw)/1 var(--plate-font); letter-spacing: .04em; text-transform: uppercase; caret-color: var(--navy); }
 .plate-input-box input:focus-visible { outline: 0; }
 .plate-input-box input::placeholder { color: #c3cad6; }
 .gate-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }

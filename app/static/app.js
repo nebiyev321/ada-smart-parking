@@ -22,7 +22,12 @@ const status = s => `<span class="status s-${esc(s)}">${esc(STATUS[s] || s)}</sp
 const PLATE_SIDE = `<span class="plate-side" aria-hidden="true"><i class="plate-flag"></i><b class="plate-az">AZ</b></span>`;
 // AZS 599 (Figure 18): every character sits in a 45 mm cell, and separators are raised 15 x 10 mm bars,
 // not the font's hyphen, whatever was typed.
-const plateChars = p => String(p ?? "").trim().split(/[\s-]+/)
+// Plates recorded without separators ("10AB123") are split into the standard 10-AB-123 groups.
+const plateGroups = p => {
+  const t = String(p ?? "").trim().toUpperCase(), m = t.match(/^(\d{2})([A-Z]{1,2})(\d{3})$/);
+  return m ? m.slice(1) : t.split(/[\s-]+/);
+};
+const plateChars = p => plateGroups(p)
   .map(g => [...g].map(c => `<b data-c="${esc(c)}">${esc(c)}</b>`).join("")).join(`<i class="plate-dash"></i>`);
 
 // DIN 1451 letters are narrower than most fonts that stand in for it, so measure each glyph's ink in the
@@ -31,11 +36,10 @@ async function fitPlateGlyphs() {
   try { await document.fonts.ready; } catch { /* fonts API unavailable: plates still render, just unfitted */ }
   const probe = document.createElement("span");
   probe.className = "plate-num"; probe.setAttribute("aria-hidden", "true"); probe.textContent = "0";
-  Object.assign(probe.style, { position: "absolute", visibility: "hidden", fontSize: "108px" });
+  Object.assign(probe.style, { position: "absolute", visibility: "hidden", fontSize: "92px" });
   document.body.append(probe);
   const cs = getComputedStyle(probe), ctx = document.createElement("canvas").getContext("2d");
-  ctx.font = `${cs.fontWeight} 108px ${cs.fontFamily}`;
-  if ("fontStretch" in ctx) ctx.fontStretch = "semi-condensed";
+  ctx.font = `${cs.fontWeight} 92px ${cs.fontFamily}`;
   probe.remove();
   const rules = [];
   for (const c of "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") {
