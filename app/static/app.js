@@ -20,8 +20,35 @@ const STATUS = { active: "Active", pending: "Waiting for approval", rejected: "R
 const status = s => `<span class="status s-${esc(s)}">${esc(STATUS[s] || s)}</span>`;
 // The left band of a real AZ plate: the national flag above the boxed "AZ" RFID label.
 const PLATE_SIDE = `<span class="plate-side" aria-hidden="true"><i class="plate-flag"></i><b class="plate-az">AZ</b></span>`;
-// Plates print the groups apart, "10 GS 106", whatever separator was typed.
-const plateChars = p => String(p ?? "").trim().split(/[\s-]+/).map(esc).join(`<i class="plate-gap"></i>`);
+// AZS 599 (Figure 18): every character sits in a 45 mm cell, and separators are raised 15 x 10 mm bars,
+// not the font's hyphen, whatever was typed.
+const plateChars = p => String(p ?? "").trim().split(/[\s-]+/)
+  .map(g => [...g].map(c => `<b data-c="${esc(c)}">${esc(c)}</b>`).join("")).join(`<i class="plate-dash"></i>`);
+
+// DIN 1451 letters are narrower than most fonts that stand in for it, so measure each glyph's ink in the
+// font this device actually resolved and squeeze any that would spill out of its 45 mm cell.
+async function fitPlateGlyphs() {
+  try { await document.fonts.ready; } catch { /* fonts API unavailable: plates still render, just unfitted */ }
+  const probe = document.createElement("span");
+  probe.className = "plate-num"; probe.setAttribute("aria-hidden", "true"); probe.textContent = "0";
+  Object.assign(probe.style, { position: "absolute", visibility: "hidden", fontSize: "108px" });
+  document.body.append(probe);
+  const cs = getComputedStyle(probe), ctx = document.createElement("canvas").getContext("2d");
+  ctx.font = `${cs.fontWeight} 108px ${cs.fontFamily}`;
+  if ("fontStretch" in ctx) ctx.fontStretch = "semi-condensed";
+  probe.remove();
+  const rules = [];
+  for (const c of "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") {
+    const m = ctx.measureText(c), ink = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+    if (ink > 45) rules.push(`.plate-num b[data-c="${c}"] { transform: scaleX(${(45 / ink).toFixed(3)}); }`);
+  }
+  try {
+    const sheet = new CSSStyleSheet(); sheet.replaceSync(rules.join(" "));
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+  } catch { /* older browser: letters keep their natural width */ }
+}
+fitPlateGlyphs();
+
 const plate = (p, lg) => `<span class="plate${lg ? " lg" : ""}" role="img" aria-label="Plate ${esc(p)}">${PLATE_SIDE}<span class="plate-num" aria-hidden="true">${plateChars(p)}</span></span>`;
 const GATES = { main: "Main gate", north: "North gate" };
 const gateName = id => GATES[id] || cap(words(id)) + " gate";
@@ -157,6 +184,7 @@ async function renderApp(seq, enter) {
   const current = tabs.find(t => "#" + t.id === location.hash)?.id || (has("guard") ? "gate" : "vehicle");
   const nav = $("#nav"); nav.hidden = tabs.length < 2;
   nav.innerHTML = tabs.map(t => `<a href="#${t.id}"${t.id === current ? ' aria-current="page"' : ""}>${esc(t.label)}</a>`).join("");
+  showTab(nav);
   document.title = `${tabs.find(t => t.id === current).label} · ADA Smart Parking`;
   try { await VIEWS[current](); } catch (e) { if (seq === renderSeq) showError(e); }
   if (enter && seq === renderSeq) replay($("#view"), "enter");
@@ -167,11 +195,17 @@ function showError(e) {
     <p>${esc(e.message)}</p><button type="button" data-action="retry">Try again</button></div>`;
 }
 
+// On a phone the tab strip scrolls; keep the current tab in view.
+function showTab(nav) {
+  const a = $("[aria-current]", nav);
+  if (a && nav.scrollWidth > nav.clientWidth) nav.scrollTo({ left: a.offsetLeft - (nav.clientWidth - a.offsetWidth) / 2, behavior: calm() ? "auto" : "smooth" });
+}
+
 // The paper tab slides to the new section at once; the page follows when its data arrives.
 function moveTab(id) {
   const nav = $("#nav"), next = $(`a[href="#${CSS.escape(id)}"]`, nav);
   if (!next || next.hasAttribute("aria-current")) return;
-  const swap = () => { $("[aria-current]", nav)?.removeAttribute("aria-current"); next.setAttribute("aria-current", "page"); };
+  const swap = () => { $("[aria-current]", nav)?.removeAttribute("aria-current"); next.setAttribute("aria-current", "page"); showTab(nav); };
   if (document.startViewTransition && !calm()) document.startViewTransition(swap); else swap();
 }
 
@@ -226,7 +260,7 @@ function loginError(msg) { const el = $(".login-err"); if (el) el.textContent = 
 
 const vehicleForm = (id, submit) => `<form id="${id}" novalidate>
   <div class="grid">
-    <label class="field"><span>Plate number</span><input name="plate" placeholder="10 AB 123" required maxlength="16"
+    <label class="field"><span>Plate number</span><input name="plate" placeholder="10-AB-123" required maxlength="16"
       autocomplete="off" autocapitalize="characters" spellcheck="false"><small>As shown on the plate</small></label>
     <label class="field"><span>Make</span><input name="make" placeholder="Toyota" required maxlength="40" autocomplete="off"></label>
     <label class="field"><span>Model</span><input name="model" placeholder="Corolla" required maxlength="40" autocomplete="off"></label>
@@ -321,7 +355,7 @@ const VIEWS = {
     $("#view").innerHTML = page("Gate check", `<label class="gate-pick"><span>Gate</span><select id="gg">${Object.entries(GATES).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></label>`)
       + `<section class="gate-desk"><form id="gate" novalidate>
         <label class="plate-input" for="gp"><span class="plate-input-label">Plate number</span>
-          <span class="plate-input-box">${PLATE_SIDE}<input id="gp" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="16" placeholder="10 AB 123" enterkeyhint="done"></span></label>
+          <span class="plate-input-box">${PLATE_SIDE}<input id="gp" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="16" placeholder="10-AB-123" enterkeyhint="done"></span></label>
       </form>
       <div class="gate-buttons"><button type="button" data-action="gate" data-dir="in">Record entry</button><button type="button" class="ghost" data-action="gate" data-dir="out">Record exit</button></div>
       <p class="muted gate-hint">Press Enter to record an entry.</p>

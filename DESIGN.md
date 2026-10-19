@@ -173,8 +173,8 @@ components:
     typography: "{typography.plate}"
     rounded: "{rounded.plate}"
   plate-label:
+    backgroundColor: "{colors.surface}"
     textColor: "{colors.plate-ink}"
-    rounded: "10mm at plate scale"
   verdict-allow:
     backgroundColor: "{colors.allow-soft}"
     textColor: "{colors.allow}"
@@ -235,7 +235,7 @@ ADA Smart Parking looks like the paperwork of parking made trustworthy: a navy A
 
 Density is moderate and practical. Owners and admins read tables and cards on desktop and phone; guards act at the gate on a phone, so the gate-check surface goes large (2rem plate input, 56px gate buttons, 2rem verdict word). Colour carries meaning: navy is ADA and action, and three status hues (allow green, check red, wait amber) carry every state, always as a soft tint plus a strong ink, never as decoration.
 
-The signature is object fidelity. Plates follow the Azerbaijani national standard (flag, grey AZ label tile, DIN 1451 characters in spaced groups); the sign-in card is a hang-tag with a punched hanger hole, side notches at the perforation, a dashed tear line and a tear-off stub. Motion is authored around these objects: the tag swings once from its hole, the stub tears when a demo account is picked, the tag unhooks and drops away on sign-in, the owner's permit swings once, and at the gate the typed plate flies into the verdict. Everything else moves only to acknowledge an action or explain a change of state.
+The signature is object fidelity. Plates follow the Azerbaijani national standard (AZS 599: flag, outlined AZ label, DIN 1451 characters in 45 mm cells, bar separators); the sign-in card is a hang-tag with a punched hanger hole, side notches at the perforation, a dashed tear line and a tear-off stub. Motion is authored around these objects: the tag swings once from its hole, the stub tears when a demo account is picked, the tag unhooks and drops away on sign-in, the owner's permit swings once, and at the gate the typed plate flies into the verdict. Everything else moves only to acknowledge an action or explain a change of state.
 
 **Key Characteristics:**
 - ADA navy band header; paper ground; flat white cards with hairline borders.
@@ -357,9 +357,12 @@ A white tab strip under the header with a hairline bottom border. Tabs are Slate
 An inline pill (999px) with a 7px dot in the current colour, 1px 10px padding, Status type. Active is allow, pending is wait, rejected/suspended/expired/none are check, inactive is a neutral grey tint with Slate text.
 
 ### Number Plate (signature)
-Drawn to the Azerbaijani national standard and checked against photos of real plates: 520 x 110 mm, white, a thin black frame (4) with rounded corners (10). Every dimension derives from one unit, `--u` = plate height / 110 (one millimetre at plate scale), so every size keeps the real proportions.
-- **Left band:** the national flag (42 x 21, with crescent and star) at the top, the "AZ" RFID label below it: a pale grey-green tile (#e4eae3, 52 x 40, radius 9, hairline #c9d1c8) with grey (#4d5650) lettering.
-- **Characters:** DIN 1451 Mittelschrift (regular weight), 77 tall, 45 wide with 7 between them. The stack is Bahnschrift (DIN 1451, on Windows) at 87.5% stretch, falling back to Barlow Semi Condensed. Groups are printed apart with a 24 space ("10 GS 106"), whatever separator was typed; the stored form keeps its hyphens.
+Drawn to the national standard **AZS 599-2015, Type I** (Table 1, Figure 5, Figure 18), with every dimension in plate millimetres via one unit, `--u` = plate height / 110:
+- **Plate:** 520 x 110, corner R13, white reflective field, a 4.5 black border strip inset 3 from the edge (§2.2: symbols and border strip black on white). On screen a 1px #c3cad6 hairline marks the plate edge.
+- **Flag (§1.7):** the tricolour, 42 x 21, at 25 from the left and 17 from the top, with crescent and star.
+- **RFID label:** 58 x 44 at 16 from the left and 17 from the bottom, white with a thin black rounded outline and "AZ" in DIN 1451 Mittelschrift, directly below the flag.
+- **Characters (Figure 18):** DIN 1451 Mittelschrift, 77 tall, each in a 45 cell with 7 between cells, starting 88 from the left and ending 26 from the right. Bahnschrift (DIN 1451, on Windows) at 87.5% stretch, falling back to Barlow Semi Condensed; at startup each glyph's ink is measured in the resolved font and any wider than 45 is scaled to fit its cell, so every plate is the standard width.
+- **Separators:** raised bars 15 x 10, 8 clear either side (31 between groups), never the font's hyphen, whatever was typed.
 - **Sizes:** 30px tall inline, 58px for verdicts (50px on phones), 46px on the owner's permit tag; the gate input is itself a plate (78–104px).
 - It is announced as one image ("Plate 10-AB-123").
 
@@ -403,7 +406,7 @@ The toast is an Ink pill-ish block (8px) centred 20px from the bottom, fading in
 ### Don't:
 - **Don't** recreate the old MyADA teal sign-in or move off ADA navy; the app has its own world.
 - **Don't** put the sign-in on a floating white rectangle over a gradient; it is the hang-tag.
-- **Don't** use the flag colours as UI colours, or draw the plate with an EU-style blue strip or hyphens between the groups.
+- **Don't** use the flag colours as UI colours, or draw the plate with an EU-style blue strip or with spaces or font hyphens between the groups.
 - **Don't** add shadows to cards, inputs or panels; shadows are for the hanging tag, toasts and dialogs.
 - **Don't** call a gate verdict "denied" or "blocked"; the vocabulary is "Allow" and "Check the driver", because the gate never auto-blocks.
 - **Don't** add decorative motion: scroll reveals, hover lifts, or loops (the slow-response bar loops only while a request is pending).

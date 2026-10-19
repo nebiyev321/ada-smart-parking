@@ -89,26 +89,32 @@ button:disabled { cursor: not-allowed; }
 .notice.warn { background: var(--wait-soft); }
 .notice.bad { background: var(--check-soft); }
 
-/* Azerbaijani number plate, drawn to the national standard (520 x 110 mm, R13 corners):
-   flag 42 x 21 top-left, boxed "AZ" RFID label 58 x 44 below it, DIN 1451 Mittelschrift
-   characters 77 mm tall. Every size comes from --u, one millimetre at the plate's height. */
-.plate, .plate-input-box { --h: 30px; --u: calc(var(--h) / 110); }
-.plate { display: inline-flex; align-items: center; height: var(--h); padding: 0 calc(var(--u) * 24) 0 calc(var(--u) * 12);
-  gap: calc(var(--u) * 4); background: #fff; color: #111; vertical-align: middle; line-height: 1;
-  border: max(1.5px, calc(var(--u) * 4)) solid #111; border-radius: calc(var(--u) * 10); }
+/* Azerbaijani number plate, AZS 599-2015, Type I (Table 1, Figure 5, Figure 18).
+   Plate 520 x 110, corner R13, a 4.5 black border strip inset from the edge, white reflective
+   field. Flag 42 x 21 at 25 from the left and 17 from the top; the "AZ" RFID label 58 x 44 at
+   16 from the left and 17 from the bottom. Characters DIN 1451 Mittelschrift, 77 tall, 45 wide,
+   7 apart, starting 88 from the left and ending 26 from the right; separators are 15 x 10 bars
+   with 31 between groups. --u is one millimetre at the plate's rendered height. */
+.plate, .plate-input-box { --h: 30px; --u: calc(var(--h) / 110); --edge: calc(var(--u) * 3); --strip: max(1px, calc(var(--u) * 4.5)); }
+.plate { position: relative; display: inline-flex; align-items: center; height: var(--h);
+  padding: 0 calc(var(--u) * 26) 0 calc(var(--u) * 88); background: #fff; color: #111; vertical-align: middle; line-height: 1;
+  border-radius: calc(var(--u) * 13); box-shadow: 0 0 0 1px #c3cad6; }
 .plate.lg { --h: 58px; }
-.plate-side { flex: none; width: calc(var(--u) * 58); height: 100%; display: flex; flex-direction: column; justify-content: space-between; align-items: center;
-  padding: calc(var(--u) * 12) 0; }
-.plate-flag { display: block; width: calc(var(--u) * 42); height: calc(var(--u) * 21); flex: none;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 24'%3E%3Cpath fill='%2300b5e2' d='M0 0h48v8H0z'/%3E%3Cpath fill='%23ef3340' d='M0 8h48v8H0z'/%3E%3Cpath fill='%23509e2f' d='M0 16h48v8H0z'/%3E%3Ccircle cx='22.6' cy='12' r='3.4' fill='%23fff'/%3E%3Ccircle cx='23.5' cy='12' r='2.8' fill='%23ef3340'/%3E%3Cpath fill='%23fff' d='M26.9 10.4l.5 1.1 1.1-.5-.5 1.1 1.1.5-1.1.5.5 1.1-1.1-.5-.5 1.1-.5-1.1-1.1.5.5-1.1-1.1-.5 1.1-.5-.5-1.1 1.1.5z'/%3E%3C/svg%3E") center / 100% 100%; }
-/* The RFID label: a pale grey-green tile with grey lettering, as on the plates themselves */
-.plate-az { flex: none; display: grid; place-items: center; width: calc(var(--u) * 52); height: calc(var(--u) * 40);
-  background: #e4eae3; color: #4d5650; box-shadow: inset 0 0 0 max(.5px, calc(var(--u) * 1.5)) #c9d1c8; border-radius: calc(var(--u) * 9);
-  font: 500 calc(var(--u) * 28)/1 var(--din); letter-spacing: .03em; }
-/* Characters 77 tall and 45 wide with 7 between them; separators are bars with 8 either side */
-.plate-num { display: inline-flex; align-items: center; font: 400 calc(var(--u) * 108)/1 var(--din); font-stretch: 87.5%;
-  letter-spacing: 0; white-space: nowrap; padding-top: calc(var(--u) * 3); }
-.plate-gap { flex: none; width: calc(var(--u) * 24); }
+/* The black border strip sits inside the plate's white edge */
+.plate::before, .plate-input-box::before { content: ""; position: absolute; inset: var(--edge); border: var(--strip) solid #111;
+  border-radius: calc(var(--u) * 10); pointer-events: none; }
+.plate-side { position: absolute; inset: 0; pointer-events: none; }
+.plate-flag { position: absolute; left: calc(var(--u) * 25); top: calc(var(--u) * 17); width: calc(var(--u) * 42); height: calc(var(--u) * 21);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 24' preserveAspectRatio='none'%3E%3Cpath fill='%2300b5e2' d='M0 0h48v8H0z'/%3E%3Cpath fill='%23ef3340' d='M0 8h48v8H0z'/%3E%3Cpath fill='%23509e2f' d='M0 16h48v8H0z'/%3E%3Ccircle cx='22.6' cy='12' r='3.4' fill='%23fff'/%3E%3Ccircle cx='23.5' cy='12' r='2.8' fill='%23ef3340'/%3E%3Cpath fill='%23fff' d='M26.9 10.4l.5 1.1 1.1-.5-.5 1.1 1.1.5-1.1.5.5 1.1-1.1-.5-.5 1.1-.5-1.1-1.1.5.5-1.1-1.1-.5 1.1-.5-.5-1.1 1.1.5z'/%3E%3C/svg%3E") center / 100% 100%; }
+/* RFID label (Figure 5 detail): white, thin black rounded outline, "AZ" 25 tall */
+.plate-az { position: absolute; left: calc(var(--u) * 16); bottom: calc(var(--u) * 17); width: calc(var(--u) * 58); height: calc(var(--u) * 44);
+  display: grid; place-items: center; background: #fff; color: #111; border: max(.75px, calc(var(--u) * 1.8)) solid #111; border-radius: calc(var(--u) * 9);
+  font: 400 calc(var(--u) * 35)/1 var(--din); font-stretch: 87.5%; padding-top: calc(var(--u) * 2); }
+.plate-num { display: inline-flex; align-items: center; font: 500 calc(var(--u) * 108)/1 var(--din); font-stretch: 87.5%;
+  white-space: nowrap; padding-top: calc(var(--u) * 3); }
+.plate-num b { display: inline-block; width: calc(var(--u) * 45); text-align: center; font-weight: inherit; }
+.plate-num b + b { margin-left: calc(var(--u) * 7); }
+.plate-dash { flex: none; width: calc(var(--u) * 15); height: max(1.5px, calc(var(--u) * 10)); background: currentColor; margin: 0 calc(var(--u) * 8); }
 .vehicle { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; margin-bottom: 8px; }
 .vehicle .desc { font-weight: 600; }
 
@@ -118,9 +124,9 @@ button:disabled { cursor: not-allowed; }
 .gate-desk { margin-bottom: 24px; }
 .plate-input { display: block; }
 .plate-input-label { display: block; font-size: .875rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
-.plate-input-box { --h: clamp(78px, 15vw, 104px); display: flex; align-items: center; gap: calc(var(--u) * 20); height: var(--h);
-  padding: 0 calc(var(--u) * 20) 0 calc(var(--u) * 14); background: #fff; color: #111;
-  border: calc(var(--u) * 4) solid #111; border-radius: calc(var(--u) * 10); }
+.plate-input-box { --h: clamp(78px, 15vw, 104px); position: relative; display: flex; align-items: center; height: var(--h);
+  padding: 0 calc(var(--u) * 20) 0 calc(var(--u) * 88); background: #fff; color: #111;
+  border-radius: calc(var(--u) * 13); box-shadow: 0 0 0 1px #c3cad6; }
 .plate-input-box:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; }
 .plate-input-box input { flex: 1; height: 100%; border: 0; border-radius: 0; min-width: 0; padding: calc(var(--u) * 4) 0 0; background: transparent;
   font: 400 min(calc(var(--u) * 104), 11vw)/1 var(--din); font-stretch: 87.5%; letter-spacing: .02em; text-transform: uppercase; caret-color: var(--navy); }
@@ -157,10 +163,13 @@ td.actions-cell button { margin-left: 6px; }
   .card { padding: 16px; }
   thead { position: absolute; left: -9999px; }
   table, tbody, tr, td { display: block; }
-  tr { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  tr { padding: 10px 0 9px; border-bottom: 1px solid var(--line); }
   tbody tr:last-child { border-bottom: 0; }
-  td { border: 0; padding: 3px 0; display: grid; grid-template-columns: 7.5em 1fr; gap: 8px; justify-items: start; align-items: center; }
-  td::before { content: attr(data-label); color: var(--muted); font-size: .85rem; font-weight: 600; }
+  td { border: 0; padding: 2px 0; display: grid; grid-template-columns: 6.5em 1fr; gap: 8px; justify-items: start; align-items: center; font-size: .92rem; }
+  td::before { content: attr(data-label); color: var(--muted); font-size: .8rem; font-weight: 600; }
+  /* The plate leads each record */
+  td[data-label="Plate"], td[data-label="Vehicle"] { order: -1; padding-bottom: 4px; }
+  tr { display: flex; flex-direction: column; }
   td > .sub { grid-column: 2; }
   td[data-label=""] { grid-template-columns: 1fr; }
   td[data-label=""]::before { display: none; }
@@ -346,8 +355,8 @@ button[aria-busy="true"]::after { content: ""; display: inline-block; width: .85
 input, select, textarea { transition: border-color .15s, box-shadow .15s; }
 .demo { transition: background-color .15s, border-color .15s; }
 .demo:active { transform: translateY(1px); }
-.plate-input-box { transition: border-color .15s; }
-.plate-input-box.nudge { animation: nudge .36s ease-in-out; border-color: var(--check); }
+.plate-input-box.nudge { animation: nudge .36s ease-in-out; }
+.plate-input-box.nudge::before { border-color: var(--check); }
 
 /* Gate verdict: the panel lands, the word stamps, the typed plate flies in (JS) */
 .verdict { animation: fade .12s ease-out both; } /* short, so the flying plate inside stays visible */
