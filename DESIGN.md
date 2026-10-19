@@ -21,7 +21,10 @@ colors:
   wait: "#8a5100"
   wait-soft: "#fff1da"
   focus: "#f0b400"
-  plate-blue: "#003ea3"
+  plate-ink: "#111111"
+  flag-blue: "#00b5e2"
+  flag-red: "#ef3340"
+  flag-green: "#509e2f"
 typography:
   display:
     fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
@@ -169,9 +172,9 @@ components:
     textColor: "{colors.ink}"
     typography: "{typography.plate}"
     rounded: "{rounded.plate}"
-  plate-region:
-    backgroundColor: "{colors.plate-blue}"
-    textColor: "{colors.surface}"
+  plate-label:
+    textColor: "{colors.plate-ink}"
+    rounded: "10mm at plate scale"
   verdict-allow:
     backgroundColor: "{colors.allow-soft}"
     textColor: "{colors.allow}"
@@ -232,14 +235,14 @@ ADA Smart Parking looks like the paperwork of parking made trustworthy: a navy A
 
 Density is moderate and practical. Owners and admins read tables and cards on desktop and phone; guards act at the gate on a phone, so the gate-check surface goes large (2rem plate input, 56px gate buttons, 2rem verdict word). Colour carries meaning: navy is ADA and action, and three status hues (allow green, check red, wait amber) carry every state, always as a soft tint plus a strong ink, never as decoration.
 
-The signature is object fidelity. Plates use a condensed, tracked plate face with the blue AZ region strip and flag; the sign-in card is a hang-tag with a punched hanger hole, side notches at the perforation, a dashed tear line and a tear-off stub. Motion belongs to these objects only: the tag swings once from its hole, and the stub tears a few pixels when a demo account is picked. Everything else is still.
+The signature is object fidelity. Plates follow the Azerbaijani national standard (flag, grey AZ label tile, DIN 1451 characters in spaced groups); the sign-in card is a hang-tag with a punched hanger hole, side notches at the perforation, a dashed tear line and a tear-off stub. Motion is authored around these objects: the tag swings once from its hole, the stub tears when a demo account is picked, the tag unhooks and drops away on sign-in, the owner's permit swings once, and at the gate the typed plate flies into the verdict. Everything else moves only to acknowledge an action or explain a change of state.
 
 **Key Characteristics:**
 - ADA navy band header; paper ground; flat white cards with hairline borders.
 - Two families: Source Sans 3 for all UI, Barlow Semi Condensed (600, tracked) only for plate-like codes.
 - Status is a fixed triad (allow / check / wait), each a soft tint with a strong ink.
 - Physical objects (number plate, hang-tag) are the only expressive components.
-- Amber focus ring (3px) everywhere; motion only on the hang-tag and the toast fade, and none under reduced motion.
+- Amber focus ring (3px) everywhere; motion is authored on the physical objects and is feedback-only elsewhere, with a fade or static path under reduced motion.
 
 ## Colors
 
@@ -249,7 +252,7 @@ A restrained institutional palette: one brand blue, cool blue-grey neutrals, and
 - **ADA Navy** (navy): the header band, primary buttons, the hang-tag head, active nav tab, links and the tag's caret colour. It is ADA's identity colour and is binding.
 - **Deep Navy** (navy-deep): hover state for navy buttons and links only.
 - **Navy Mist** (navy-soft): ghost-button hover, info notices, the affiliation role plate fill. Its edge companion **Mist Line** (navy-soft-line) borders role plates and is the text-selection colour.
-- **Plate Blue** (plate-blue): reserved for the AZ region strip on number plates. Never used as a UI blue.
+- **Plate Ink** (plate-ink) and the **flag colours** (flag-blue, flag-red, flag-green): the number plate only. The flag colours never appear as UI colours.
 
 ### Tertiary (status)
 - **Allow Green** (allow / allow-soft): active permits and the Allow gate verdict.
@@ -270,7 +273,7 @@ A restrained institutional palette: one brand blue, cool blue-grey neutrals, and
 ### Named Rules
 **The Tint-and-Ink Rule.** Every status appears as its soft tint behind its strong ink (green on green-soft, red on red-soft, amber on amber-soft). Never a solid status block with white text, except the deliberate danger-solid confirm button.
 
-**The Plate Blue Is Not Navy Rule.** Plate Blue belongs to the number plate's region strip. UI blue is always ADA Navy.
+**The Flag Is Not A Palette Rule.** The flag colours belong to the plate's flag. UI blue is always ADA Navy.
 
 ## Typography
 
@@ -354,7 +357,11 @@ A white tab strip under the header with a hairline bottom border. Tabs are Slate
 An inline pill (999px) with a 7px dot in the current colour, 1px 10px padding, Status type. Active is allow, pending is wait, rejected/suspended/expired/none are check, inactive is a neutral grey tint with Slate text.
 
 ### Number Plate (signature)
-The Azerbaijani plate as an inline object: white, 2px Ink border, 5px corners. The left region strip is Plate Blue with a tiny tricolour flag (blue, red, green bands) above "AZ" in 700 UI type; numerals in the Plate face. A large variant serves the gate and verdicts. It is announced as one image ("Plate 10-AB-123").
+Drawn to the Azerbaijani national standard and checked against photos of real plates: 520 x 110 mm, white, a thin black frame (4) with rounded corners (10). Every dimension derives from one unit, `--u` = plate height / 110 (one millimetre at plate scale), so every size keeps the real proportions.
+- **Left band:** the national flag (42 x 21, with crescent and star) at the top, the "AZ" RFID label below it: a pale grey-green tile (#e4eae3, 52 x 40, radius 9, hairline #c9d1c8) with grey (#4d5650) lettering.
+- **Characters:** DIN 1451 Mittelschrift (regular weight), 77 tall, 45 wide with 7 between them. The stack is Bahnschrift (DIN 1451, on Windows) at 87.5% stretch, falling back to Barlow Semi Condensed. Groups are printed apart with a 24 space ("10 GS 106"), whatever separator was typed; the stored form keeps its hyphens.
+- **Sizes:** 30px tall inline, 58px for verdicts (50px on phones), 46px on the owner's permit tag; the gate input is itself a plate (78–104px).
+- It is announced as one image ("Plate 10-AB-123").
 
 ### Gate Verdict
 An 8px-radius panel with an 8px left rule in the verdict colour, soft tint fill, and the verdict word in Verdict type ("Allow" in allow green, "Check the driver" in check red), followed by the vehicle line with a plate.
@@ -369,6 +376,16 @@ The sign-in card is an ADA parking hang-tag hanging on a 2px Hanger Steel cord f
 - **Stub:** present only when demo login is on. Stub Tint, notched and dashed at the perforation, 14px bottom corners. A Slate label with a bold Ink "Prototype:" lead-in, then demo rows: transparent 6px rows (44px) that turn white with a hairline on hover, name in 600, ID in 0.8rem Slate, role plates right-aligned. Affiliation plates (Student, Faculty) are Navy Mist with navy text; staff role plates (Guard, Parking admin, System admin) are white with Ink text and a Hanger Steel border.
 - **Motion:** on first render the tag swings once about its hanger hole (rotate -4.5deg to 2.6, -1.2, 0.45, 0 over 0.9s, `cubic-bezier(.3,.6,.4,1)`), then never again in the session. Picking a demo row tears the stub (translateY 7px, rotate 0.8deg, 0.22s `cubic-bezier(.16,1,.3,1)`), reverting if sign-in fails. Both are off under `prefers-reduced-motion`.
 
+### Motion
+Feedback 100–150ms, state changes 200–320ms, authored moments up to 900ms; arrivals use `cubic-bezier(.16,1,.3,1)`, exits `cubic-bezier(.7,0,.84,0)` and run faster.
+- **Section change:** the paper nav tab slides to the new section at once (View Transition on the tab only); content rises 8px and fades over 0.32s, staggered 40ms per block and capped, with table rows capped at five steps.
+- **Sign-in:** the tag lifts 10px and drops away (0.42s) while its cord retracts, then the app enters.
+- **Gate:** the verdict fades in over 0.12s, the verdict word stamps (scale 1.18 to 1), and the typed plate flies from the input into the verdict (FLIP, 0.42s). The new movement row flashes its status tint for 1.8s. An empty submit shakes the plate input once.
+- **Approvals:** a handled row tints and slides out (0.22–0.32s) before the list refreshes.
+- **Controls:** buttons scale to 0.97 on press; busy buttons show a spinner after 150ms. A response slower than 180ms shows a thin bar along the top edge.
+- **Overlays:** dialogs rise 10px and scale from 0.97 over 0.24s; the toast rises 12px.
+- **Reduced motion:** movement becomes a short fade or nothing; the swings and the shake are off.
+
 ### Toast and Dialog
 The toast is an Ink pill-ish block (8px) centred 20px from the bottom, fading in over 0.15s; errors turn it Check Red. Dialogs are 8px, 22px padded, at most 440px wide, actions right-aligned.
 
@@ -381,12 +398,12 @@ The toast is an Ink pill-ish block (8px) centred 20px from the bottom, fading in
 - **Do** keep Barlow Semi Condensed to stamped codes (plates, permit year, tag mark, role plates), tracked, at 600.
 - **Do** give every interactive element the 3px Focus Amber ring and touch rows at least 44px.
 - **Do** label demo affordances as prototype ("Prototype: sign in as a demo account") and keep them in the stub, below the real sign-in.
-- **Do** switch off all motion under `prefers-reduced-motion`.
+- **Do** give every movement a fade-only or static path under `prefers-reduced-motion`, keeping feedback legible.
 
 ### Don't:
 - **Don't** recreate the old MyADA teal sign-in or move off ADA navy; the app has its own world.
 - **Don't** put the sign-in on a floating white rectangle over a gradient; it is the hang-tag.
-- **Don't** use Plate Blue as a UI colour or Navy as the plate strip.
+- **Don't** use the flag colours as UI colours, or draw the plate with an EU-style blue strip or hyphens between the groups.
 - **Don't** add shadows to cards, inputs or panels; shadows are for the hanging tag, toasts and dialogs.
 - **Don't** call a gate verdict "denied" or "blocked"; the vocabulary is "Allow" and "Check the driver", because the gate never auto-blocks.
-- **Don't** add motion beyond the hang-tag's single swing, the stub tear and the toast fade.
+- **Don't** add decorative motion: scroll reveals, hover lifts, or loops (the slow-response bar loops only while a request is pending).

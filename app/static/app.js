@@ -18,9 +18,30 @@ const cap = s => s ? s[0].toUpperCase() + s.slice(1) : "";
 
 const STATUS = { active: "Active", pending: "Waiting for approval", rejected: "Rejected", suspended: "Suspended", expired: "Expired", inactive: "Replaced" };
 const status = s => `<span class="status s-${esc(s)}">${esc(STATUS[s] || s)}</span>`;
-const plate = (p, lg) => `<span class="plate${lg ? " lg" : ""}" role="img" aria-label="Plate ${esc(p)}"><span class="plate-az" aria-hidden="true"><i></i>AZ</span><span class="plate-num" aria-hidden="true">${esc(p)}</span></span>`;
+// The left band of a real AZ plate: the national flag above the boxed "AZ" RFID label.
+const PLATE_SIDE = `<span class="plate-side" aria-hidden="true"><i class="plate-flag"></i><b class="plate-az">AZ</b></span>`;
+// Plates print the groups apart, "10 GS 106", whatever separator was typed.
+const plateChars = p => String(p ?? "").trim().split(/[\s-]+/).map(esc).join(`<i class="plate-gap"></i>`);
+const plate = (p, lg) => `<span class="plate${lg ? " lg" : ""}" role="img" aria-label="Plate ${esc(p)}">${PLATE_SIDE}<span class="plate-num" aria-hidden="true">${plateChars(p)}</span></span>`;
 const GATES = { main: "Main gate", north: "North gate" };
 const gateName = id => GATES[id] || cap(words(id)) + " gate";
+
+// Motion: every effect has a CSS reduced-motion path; helpers resolve even when no animation runs.
+const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+function replay(el, cls, ms = 700) {
+  if (!el) return;
+  el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+  clearTimeout(el["_" + cls]); el["_" + cls] = setTimeout(() => el.classList.remove(cls), ms);
+}
+// Plays an exit class, then resolves, so the next state never waits more than a beat.
+function leave(el, cls = "leaving") {
+  if (!el) return Promise.resolve();
+  el.classList.add(...cls.split(" "));
+  return new Promise(done => {
+    el.addEventListener("animationend", e => { if (e.target === el) done(); });
+    setTimeout(done, 450);
+  });
+}
 
 function setStore(v) { try { v ? sessionStorage.setItem("token", v) : sessionStorage.removeItem("token"); } catch { /* storage blocked */ } }
 
@@ -108,16 +129,23 @@ const TABS = [
 ];
 
 function signOut(message) {
-  token = null; me = null; setStore(null);
+  token = null; me = null; setStore(null); swung = false; permitSwung = false;
   if (location.hash) history.replaceState(null, "", location.pathname);
   render();
   if (typeof message === "string") toast(message);
 }
 
 let renderSeq = 0;
-async function render() {
+async function render({ enter = false } = {}) {
   const seq = ++renderSeq;
   if (!token) return renderLogin();
+  // A slow answer (a cold start on Vercel) shows a thin bar instead of a frozen page.
+  const slow = setTimeout(() => document.body.classList.add("loading"), 180);
+  try { await renderApp(seq, enter); }
+  finally { clearTimeout(slow); if (seq === renderSeq) document.body.classList.remove("loading"); }
+}
+
+async function renderApp(seq, enter) {
   try { me = await api("/me"); } catch (e) { if (token) showError(e); return; }
   if (seq !== renderSeq) return;
   delete document.body.dataset.screen;
@@ -131,6 +159,7 @@ async function render() {
   nav.innerHTML = tabs.map(t => `<a href="#${t.id}"${t.id === current ? ' aria-current="page"' : ""}>${esc(t.label)}</a>`).join("");
   document.title = `${tabs.find(t => t.id === current).label} · ADA Smart Parking`;
   try { await VIEWS[current](); } catch (e) { if (seq === renderSeq) showError(e); }
+  if (enter && seq === renderSeq) replay($("#view"), "enter");
 }
 
 function showError(e) {
@@ -138,7 +167,18 @@ function showError(e) {
     <p>${esc(e.message)}</p><button type="button" data-action="retry">Try again</button></div>`;
 }
 
-window.addEventListener("hashchange", () => { render(); $("#view").focus({ preventScroll: true }); });
+// The paper tab slides to the new section at once; the page follows when its data arrives.
+function moveTab(id) {
+  const nav = $("#nav"), next = $(`a[href="#${CSS.escape(id)}"]`, nav);
+  if (!next || next.hasAttribute("aria-current")) return;
+  const swap = () => { $("[aria-current]", nav)?.removeAttribute("aria-current"); next.setAttribute("aria-current", "page"); };
+  if (document.startViewTransition && !calm()) document.startViewTransition(swap); else swap();
+}
+
+window.addEventListener("hashchange", () => {
+  moveTab(location.hash.slice(1));
+  render({ enter: true }); $("#view").focus({ preventScroll: true });
+});
 
 async function renderLogin() {
   $("#who").innerHTML = ""; $("#nav").hidden = true; document.title = "Sign in · ADA Smart Parking";
@@ -179,14 +219,14 @@ async function renderLogin() {
   if (form) form.onsubmit = e => { e.preventDefault(); ACTIONS.login($(".tag-submit", form)).catch(x => { if (x.message !== "Signed out") loginError(x.message); }); };
 }
 
-let swung = false;
+let swung = false, permitSwung = false;
 const ROLE_TAG = { guard: "Guard", parking_admin: "Parking admin", system_admin: "System admin" };
 
 function loginError(msg) { const el = $(".login-err"); if (el) el.textContent = msg; }
 
 const vehicleForm = (id, submit) => `<form id="${id}" novalidate>
   <div class="grid">
-    <label class="field"><span>Plate number</span><input name="plate" placeholder="10-AB-123" required maxlength="16"
+    <label class="field"><span>Plate number</span><input name="plate" placeholder="10 AB 123" required maxlength="16"
       autocomplete="off" autocapitalize="characters" spellcheck="false"><small>As shown on the plate</small></label>
     <label class="field"><span>Make</span><input name="make" placeholder="Toyota" required maxlength="40" autocomplete="off"></label>
     <label class="field"><span>Model</span><input name="model" placeholder="Corolla" required maxlength="40" autocomplete="off"></label>
@@ -272,6 +312,7 @@ const VIEWS = {
     // With nothing else beside the permit, the movements fill that column instead of leaving it empty.
     const html = page("My vehicle") + `<div class="owner"><div class="owner-tag">${tag}</div><div class="owner-side">${side || moves}</div></div>` + (side ? moves : "");
     $("#view").innerHTML = html;
+    if (!permitSwung) { $(".permit")?.classList.add("swing"); permitSwung = true; }
     bindForm("reg", async v => { await api("/vehicles", { method: "POST", body: v }); toast("Vehicle sent for approval"); render(); });
     bindForm("chg", async v => { await api("/change-requests", { method: "POST", body: v }); toast("Change requested"); render(); });
   },
@@ -280,7 +321,7 @@ const VIEWS = {
     $("#view").innerHTML = page("Gate check", `<label class="gate-pick"><span>Gate</span><select id="gg">${Object.entries(GATES).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></label>`)
       + `<section class="gate-desk"><form id="gate" novalidate>
         <label class="plate-input" for="gp"><span class="plate-input-label">Plate number</span>
-          <span class="plate-input-box"><span class="plate-az" aria-hidden="true"><i></i>AZ</span><input id="gp" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="16" placeholder="10-AB-123" enterkeyhint="done"></span></label>
+          <span class="plate-input-box">${PLATE_SIDE}<input id="gp" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="16" placeholder="10 AB 123" enterkeyhint="done"></span></label>
       </form>
       <div class="gate-buttons"><button type="button" data-action="gate" data-dir="in">Record entry</button><button type="button" class="ghost" data-action="gate" data-dir="out">Record exit</button></div>
       <p class="muted gate-hint">Press Enter to record an entry.</p>
@@ -363,30 +404,43 @@ const eventsTable = (rows, full) => table(
     ...(full ? [esc(e.source === "manual" ? "Guard" : e.source.toUpperCase()), esc(e.recorded_by || "Gate device")] : []),
   ]));
 
-async function gateRecent() {
+async function gateRecent(fresh) {
   const rows = (await api("/admin/gate-events")).slice(0, 10);
   $("#grecent").innerHTML = rows.length ? eventsTable(rows) : `<p class="muted">Entries and exits recorded at the gates appear here.</p>`;
+  if (fresh) $("#grecent tbody tr")?.classList.add("fresh", fresh);
+}
+
+// The plate the guard typed travels from the input into the verdict, so the answer reads as being about that car.
+function flyPlate(from, el) {
+  if (!el || calm() || !el.animate) return;
+  const to = el.getBoundingClientRect(), k = from.height / to.height;
+  el.animate([
+    { transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${k})`, opacity: .4 },
+    { transform: "none", opacity: 1 },
+  ], { duration: 420, easing: "cubic-bezier(.16, 1, .3, 1)" });
 }
 
 async function recordGate(btn) {
   const input = $("#gp"), err = $("#view .err"), dir = btn.dataset.dir;
   err.textContent = "";
   const value = input.value.trim();
-  if (!value) { err.textContent = "Type the plate number first."; input.focus(); return; }
+  if (!value) { err.textContent = "Type the plate number first."; replay($(".plate-input-box"), "nudge", 400); input.focus(); return; }
   await busy(btn, async () => {
     try {
       const gate = $("#gg").value;
       const r = await api("/admin/gate-events", { method: "POST", body: { plate: value, direction: dir, gate_id: gate } });
+      const from = $(".plate-input-box").getBoundingClientRect(), shown = r.plate_display || r.plate;
       const what = `${dir === "in" ? "Entry" : "Exit"} recorded at ${esc(gateName(gate))}, ${time(new Date().toISOString())}.`;
       $("#gres").innerHTML = r.authorized
         ? `<div class="verdict allow"><p class="verdict-word">Allow</p>
-           <div class="vehicle">${plate(r.plate, true)}</div>
+           <div class="vehicle">${plate(shown, true)}</div>
            <p><strong>${esc(r.owner)}</strong>, ${esc(r.affiliation)}. ${esc(r.vehicle)}.</p><p class="muted">${what}</p></div>`
         : `<div class="verdict check"><p class="verdict-word">Check the driver</p>
-           <div class="vehicle">${plate(r.plate, true)}</div>
+           <div class="vehicle">${plate(shown, true)}</div>
            <p>No active permit for this plate. Ask for the driver's ADA ID before letting them in.</p><p class="muted">${what}</p></div>`;
+      flyPlate(from, $("#gres .plate"));
       input.value = ""; input.focus();
-      gateRecent().catch(() => {});
+      gateRecent(r.authorized ? "allow" : "check").catch(() => {});
     } catch (x) { err.textContent = x.message; }
   });
 }
@@ -438,7 +492,8 @@ const ACTIONS = {
     catch (x) { stub?.classList.remove("tearing"); throw x; }
     token = r.token; setStore(token);
     if (location.hash) history.replaceState(null, "", location.pathname);
-    await render(); $("#view").focus({ preventScroll: true });
+    await leave($(".signin"), "unhook");
+    await render({ enter: true }); $("#view").focus({ preventScroll: true });
   },
   signout() { signOut("Signed out"); },
   retry() { return render(); },
@@ -451,16 +506,16 @@ const ACTIONS = {
   },
   async approve(b) {
     await api(`/admin/permits/${b.dataset.id}/approve`, { method: "POST", body: {} });
-    toast("Approved"); await render();
+    toast("Approved"); await leave(b.closest("tr"), "leaving approved"); await render();
   },
   async reject(b) {
     const reason = await ask({ title: `Reject ${b.dataset.name}'s request?`, field: { label: "Reason, shown to the person", required: true }, confirm: "Reject request", danger: true });
     if (!reason) return;
     await api(`/admin/permits/${b.dataset.id}/reject`, { method: "POST", body: { reason } });
-    toast("Rejected"); await render();
+    toast("Rejected"); await leave(b.closest("tr")); await render();
   },
   async contact(b) {
-    const sel = $(".tpl", b.closest(".card"));
+    const sel = $(".tpl", b.closest(".result, .card"));
     const note = await ask({ title: `Send “${sel.selectedOptions[0].text}”`, text: `To ${b.dataset.name}, about ${b.dataset.plate}.`, field: { label: "Note to add", max: 500 }, confirm: "Send message" });
     if (note === null) return;
     const r = await api(`/admin/users/${b.dataset.user}/contact`, { method: "POST", body: { template: sel.value, plate: b.dataset.plate, note: note || null } });
@@ -495,4 +550,4 @@ document.addEventListener("click", e => {
   Promise.resolve(guarded).catch(x => { if (x.message !== "Signed out") toast(x.message, "error"); });
 });
 
-render();
+render({ enter: true });

@@ -5,11 +5,15 @@
   --check: #b42318; --check-soft: #fdecea;
   --wait: #8a5100; --wait-soft: #fff1da;
   --focus: #f0b400;
-  --plate-blue: #003ea3;
   --radius: 8px;
   --ui: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
   --plate-font: "Barlow Semi Condensed", "Arial Narrow", sans-serif;
+  /* Real plates use DIN 1451 Mittelschrift; Bahnschrift is DIN 1451 and ships with Windows */
+  --din: "Bahnschrift", "D-DIN", "DIN 1451", "Barlow Semi Condensed", "Arial Narrow", sans-serif;
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-in: cubic-bezier(.7, 0, .84, 0);
 }
+[hidden] { display: none !important; }
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -85,14 +89,26 @@ button:disabled { cursor: not-allowed; }
 .notice.warn { background: var(--wait-soft); }
 .notice.bad { background: var(--check-soft); }
 
-/* Azerbaijani number plate */
-.plate { display: inline-flex; align-items: stretch; border: 2px solid var(--ink); border-radius: 5px; background: #fff; color: var(--ink); overflow: hidden; vertical-align: middle; line-height: 1; }
-.plate-az { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: var(--plate-blue); color: #fff; padding: 2px 4px; font: 700 .55rem var(--ui); letter-spacing: .02em; }
-.plate-az i { display: block; width: 12px; height: 8px; background: linear-gradient(#00b5e2 0 33.3%, #ef3340 0 66.6%, #509e2f 0); }
-.plate-num { font: 600 1.05rem var(--plate-font); letter-spacing: .06em; padding: 4px 8px 3px; white-space: nowrap; }
-.plate.lg .plate-az { font-size: .75rem; padding: 4px 7px; gap: 4px; }
-.plate.lg .plate-az i { width: 18px; height: 12px; }
-.plate.lg .plate-num { font-size: 2rem; padding: 6px 14px 4px; }
+/* Azerbaijani number plate, drawn to the national standard (520 x 110 mm, R13 corners):
+   flag 42 x 21 top-left, boxed "AZ" RFID label 58 x 44 below it, DIN 1451 Mittelschrift
+   characters 77 mm tall. Every size comes from --u, one millimetre at the plate's height. */
+.plate, .plate-input-box { --h: 30px; --u: calc(var(--h) / 110); }
+.plate { display: inline-flex; align-items: center; height: var(--h); padding: 0 calc(var(--u) * 24) 0 calc(var(--u) * 12);
+  gap: calc(var(--u) * 4); background: #fff; color: #111; vertical-align: middle; line-height: 1;
+  border: max(1.5px, calc(var(--u) * 4)) solid #111; border-radius: calc(var(--u) * 10); }
+.plate.lg { --h: 58px; }
+.plate-side { flex: none; width: calc(var(--u) * 58); height: 100%; display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+  padding: calc(var(--u) * 12) 0; }
+.plate-flag { display: block; width: calc(var(--u) * 42); height: calc(var(--u) * 21); flex: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 24'%3E%3Cpath fill='%2300b5e2' d='M0 0h48v8H0z'/%3E%3Cpath fill='%23ef3340' d='M0 8h48v8H0z'/%3E%3Cpath fill='%23509e2f' d='M0 16h48v8H0z'/%3E%3Ccircle cx='22.6' cy='12' r='3.4' fill='%23fff'/%3E%3Ccircle cx='23.5' cy='12' r='2.8' fill='%23ef3340'/%3E%3Cpath fill='%23fff' d='M26.9 10.4l.5 1.1 1.1-.5-.5 1.1 1.1.5-1.1.5.5 1.1-1.1-.5-.5 1.1-.5-1.1-1.1.5.5-1.1-1.1-.5 1.1-.5-.5-1.1 1.1.5z'/%3E%3C/svg%3E") center / 100% 100%; }
+/* The RFID label: a pale grey-green tile with grey lettering, as on the plates themselves */
+.plate-az { flex: none; display: grid; place-items: center; width: calc(var(--u) * 52); height: calc(var(--u) * 40);
+  background: #e4eae3; color: #4d5650; box-shadow: inset 0 0 0 max(.5px, calc(var(--u) * 1.5)) #c9d1c8; border-radius: calc(var(--u) * 9);
+  font: 500 calc(var(--u) * 28)/1 var(--din); letter-spacing: .03em; }
+/* Characters 77 tall and 45 wide with 7 between them; separators are bars with 8 either side */
+.plate-num { display: inline-flex; align-items: center; font: 400 calc(var(--u) * 108)/1 var(--din); font-stretch: 87.5%;
+  letter-spacing: 0; white-space: nowrap; padding-top: calc(var(--u) * 3); }
+.plate-gap { flex: none; width: calc(var(--u) * 24); }
 .vehicle { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; margin-bottom: 8px; }
 .vehicle .desc { font-weight: 600; }
 
@@ -102,11 +118,12 @@ button:disabled { cursor: not-allowed; }
 .gate-desk { margin-bottom: 24px; }
 .plate-input { display: block; }
 .plate-input-label { display: block; font-size: .875rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
-.plate-input-box { display: flex; align-items: stretch; background: #fff; border: 3px solid var(--ink); border-radius: 10px; overflow: hidden; }
-.plate-input-box:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
-.plate-input-box .plate-az { font-size: .9rem; padding: 6px 12px; gap: 6px; }
-.plate-input-box .plate-az i { width: 24px; height: 16px; }
-.plate-input-box input { border: 0; border-radius: 0; min-width: 0; font: 600 clamp(2rem, 7vw, 3.4rem)/1 var(--plate-font); letter-spacing: .08em; text-transform: uppercase; padding: 14px 18px 12px; caret-color: var(--navy); }
+.plate-input-box { --h: clamp(78px, 15vw, 104px); display: flex; align-items: center; gap: calc(var(--u) * 20); height: var(--h);
+  padding: 0 calc(var(--u) * 20) 0 calc(var(--u) * 14); background: #fff; color: #111;
+  border: calc(var(--u) * 4) solid #111; border-radius: calc(var(--u) * 10); }
+.plate-input-box:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; }
+.plate-input-box input { flex: 1; height: 100%; border: 0; border-radius: 0; min-width: 0; padding: calc(var(--u) * 4) 0 0; background: transparent;
+  font: 400 min(calc(var(--u) * 104), 11vw)/1 var(--din); font-stretch: 87.5%; letter-spacing: .02em; text-transform: uppercase; caret-color: var(--navy); }
 .plate-input-box input:focus-visible { outline: 0; }
 .plate-input-box input::placeholder { color: #c3cad6; }
 .gate-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
@@ -118,7 +135,6 @@ button:disabled { cursor: not-allowed; }
 .verdict.check { background: var(--check); }
 .verdict-word { font: 600 clamp(2.6rem, 9vw, 4rem)/1 var(--plate-font); letter-spacing: .01em; margin-bottom: 12px !important; }
 .verdict .vehicle { margin: 0 0 10px; }
-.verdict .plate { border-color: #fff; }
 .verdict .muted { color: rgba(255, 255, 255, .85); }
 
 /* Tables become stacked rows on narrow screens */
@@ -148,22 +164,24 @@ td.actions-cell button { margin-left: 6px; }
   td > .sub { grid-column: 2; }
   td[data-label=""] { grid-template-columns: 1fr; }
   td[data-label=""]::before { display: none; }
-  td.actions-cell { text-align: left; white-space: normal; padding-top: 8px; }
-  td.actions-cell button { margin: 0 6px 0 0; }
-  .plate.lg .plate-num { font-size: 1.6rem; }
+  td.actions-cell { display: flex; flex-wrap: wrap; gap: 8px; text-align: left; white-space: normal; padding-top: 10px; }
+  td.actions-cell button { margin: 0; flex: 1 1 8rem; }
+  .plate.lg { --h: 50px; }
 }
 
 /* My vehicle: the permit as a hang-tag, with the forms beside it */
 .owner { display: grid; grid-template-columns: 340px 1fr; gap: 24px; align-items: start; margin-bottom: 20px; }
 .owner-side > .card:last-child { margin-bottom: 0; }
+.owner-side .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 420px) { .owner-side .grid { grid-template-columns: 1fr; } }
 .permit { --hole: 22px; filter: drop-shadow(0 10px 22px rgba(11, 61, 145, .16)) drop-shadow(0 2px 4px rgba(23, 32, 46, .1)); }
 .permit-main { background: var(--surface); border-radius: 20px 20px 14px 14px; overflow: hidden;
   -webkit-mask: radial-gradient(circle 8px at 50% var(--hole), transparent 7.5px, #000 8px);
   mask: radial-gradient(circle 8px at 50% var(--hole), transparent 7.5px, #000 8px); }
 .permit-head { background: var(--navy); color: #fff; text-align: center; padding: calc(var(--hole) + 16px) 20px 22px; }
 .permit-head img { display: block; width: 72px; height: auto; margin: 0 auto; }
+.permit-head .plate { --h: 46px; max-width: 100%; }
 .permit-name { display: block; font: 600 1.05rem var(--plate-font); letter-spacing: .24em; margin: 8px 0 16px .24em; }
-.permit-head .plate { border-color: #fff; }
 .plate-slot { display: inline-block; border: 2px dashed rgba(255, 255, 255, .6); border-radius: 5px; padding: 12px 22px; font-weight: 600; color: #d3ddf1; }
 .permit-strip { margin: 0; padding: 8px 20px; text-align: center; font: 600 1.05rem var(--plate-font); letter-spacing: .06em; }
 .permit-strip.allow { background: var(--allow); color: #fff; }
@@ -273,11 +291,95 @@ body[data-screen="login"] main { max-width: none; margin: 0; padding: 0; }
 .details { font-size: .875rem; color: var(--muted); }
 
 /* Toast and dialog */
-#toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: var(--radius); max-width: calc(100vw - 32px); box-shadow: 0 6px 24px rgba(23, 32, 46, .25); opacity: 0; pointer-events: none; transition: opacity .15s; }
-#toast.show { opacity: 1; }
+#toast { position: fixed; left: 50%; bottom: 20px; transform: translate(-50%, 12px) scale(.98); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: var(--radius); max-width: calc(100vw - 32px); box-shadow: 0 6px 24px rgba(23, 32, 46, .25); opacity: 0; pointer-events: none;
+  transition: opacity .15s, transform .15s var(--ease-in); }
+#toast.show { opacity: 1; transform: translate(-50%, 0); transition: opacity .2s, transform .32s var(--ease-out); }
 #toast.error { background: var(--check); }
 dialog { border: 0; border-radius: var(--radius); padding: 22px; width: min(440px, calc(100vw - 32px)); color: var(--ink); box-shadow: 0 20px 60px rgba(23, 32, 46, .35); }
 dialog::backdrop { background: rgba(23, 32, 46, .5); }
 dialog .actions { justify-content: flex-end; }
 
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+/* Motion. Feedback stays fast (≤150ms), state changes 200–320ms, the authored moments
+   (tag swing, unhook, plate into verdict) up to 900ms. Content is visible by default;
+   every movement below has a fade-only or static path under reduced motion. */
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+@keyframes fade { from { opacity: 0; } }
+@keyframes stamp { 0% { opacity: 0; transform: scale(1.18); } 60% { opacity: 1; } 100% { transform: none; } }
+@keyframes nudge { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(5px); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes appear { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slide-out { to { opacity: 0; transform: translateX(16px); } }
+@keyframes flash-allow { from { background: var(--allow-soft); } }
+@keyframes flash-check { from { background: var(--check-soft); } }
+@keyframes approved { 0% { background: var(--allow-soft); } 100% { background: var(--allow-soft); opacity: 0; transform: translateX(16px); } }
+/* Taking the permit off the hook: it lifts, then drops away as the app arrives */
+@keyframes unhook { 0% { transform: none; } 30% { transform: translateY(-10px) rotate(-1deg); } 100% { transform: translateY(70px) rotate(5deg); opacity: 0; } }
+@keyframes cord-go { to { transform: scaleY(0); } }
+@keyframes progress { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+
+/* Section entrance: header, then cards, then table rows, capped so nothing waits */
+#view.enter > * { animation: rise .32s var(--ease-out) both; }
+#view.enter > :nth-child(2) { animation-delay: .04s; }
+#view.enter > :nth-child(3) { animation-delay: .08s; }
+#view.enter > :nth-child(n+4) { animation-delay: .12s; }
+#view.enter tbody tr { animation: rise .3s var(--ease-out) both; animation-delay: .14s; }
+#view.enter tbody tr:nth-child(2) { animation-delay: .17s; }
+#view.enter tbody tr:nth-child(3) { animation-delay: .2s; }
+#view.enter tbody tr:nth-child(4) { animation-delay: .23s; }
+#view.enter tbody tr:nth-child(n+5) { animation-delay: .26s; }
+
+/* The current section is a paper tab that slides between sections */
+nav a { transition: color .15s, background-color .15s; }
+nav a[aria-current="page"] { view-transition-name: nav-tab; }
+::view-transition-group(nav-tab) { animation-duration: .3s; animation-timing-function: var(--ease-out); }
+::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+
+/* Slow-response bar along the top edge */
+body.loading::before { content: ""; position: fixed; z-index: 20; top: 0; left: 0; width: 40%; height: 3px; border-radius: 0 2px 2px 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .9)); animation: progress 1.1s var(--ease-out) infinite, appear .2s both; }
+
+/* Controls acknowledge the press; busy buttons show a spinner after a beat */
+button { transition: background-color .15s, border-color .15s, color .15s, transform .1s; }
+button:active:not(:disabled) { transform: scale(.97); }
+button[aria-busy="true"]::after { content: ""; display: inline-block; width: .85em; height: .85em; margin-left: .5em; vertical-align: -.1em;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite, appear .15s .15s both; }
+input, select, textarea { transition: border-color .15s, box-shadow .15s; }
+.demo { transition: background-color .15s, border-color .15s; }
+.demo:active { transform: translateY(1px); }
+.plate-input-box { transition: border-color .15s; }
+.plate-input-box.nudge { animation: nudge .36s ease-in-out; border-color: var(--check); }
+
+/* Gate verdict: the panel lands, the word stamps, the typed plate flies in (JS) */
+.verdict { animation: fade .12s ease-out both; } /* short, so the flying plate inside stays visible */
+.verdict-word { animation: stamp .34s .05s var(--ease-out) both; transform-origin: 0 60%; }
+tr.fresh.allow { animation: flash-allow 1.8s ease-out; }
+tr.fresh.check { animation: flash-check 1.8s ease-out; }
+
+/* Approvals: the handled row leaves before the list refreshes */
+tr.leaving { animation: slide-out .22s var(--ease-in) forwards; }
+tr.leaving.approved { animation: approved .32s var(--ease-in) forwards; }
+
+/* Sign-in tag unhooks on success */
+.signin.unhook .tag { animation: unhook .42s var(--ease-in) forwards; }
+.signin.unhook::before { transform-origin: 50% 0; animation: cord-go .3s .1s var(--ease-in) forwards; }
+
+/* My vehicle: the permit swings once from its hole, like the sign-in tag */
+.permit { transform-origin: 50% var(--hole); }
+.permit.swing { animation: tag-swing .9s cubic-bezier(.3, .6, .4, 1) both; }
+.permit-strip { transition: background-color .3s; }
+
+/* Dialogs open from where attention already is */
+dialog[open] { animation: dlg-in .24s var(--ease-out); }
+dialog[open]::backdrop { animation: fade .2s ease-out; }
+@keyframes dlg-in { from { opacity: 0; transform: translateY(10px) scale(.97); } }
+
+@media (prefers-reduced-motion: reduce) {
+  #view.enter > *, #view.enter tbody tr, .verdict, .verdict-word, dialog[open] { animation: fade .2s ease-out both; animation-delay: 0s; }
+  .signin.unhook .tag, .signin.unhook::before, tr.leaving, tr.leaving.approved { animation: appear .2s reverse forwards; }
+  .permit.swing, .tag.swing, .plate-input-box.nudge { animation: none; }
+  button:active:not(:disabled), .demo:active { transform: none; }
+  #toast, #toast.show { transform: translateX(-50%); }
+  ::view-transition-group(nav-tab) { animation-duration: 0s; }
+  body.loading::before { animation: appear .2s both; width: 100%; opacity: .6; }
+  button[aria-busy="true"]::after { animation: appear .15s .15s both; border-right-color: currentColor; opacity: .5; }
+}

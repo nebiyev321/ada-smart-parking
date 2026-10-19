@@ -7,6 +7,7 @@ the Postgres backend translates it, so both backends share one set of queries.
 import os
 import re
 import sqlite3
+import threading
 from contextlib import contextmanager
 from contextvars import ContextVar
 
@@ -131,12 +132,26 @@ except ImportError:
 
 
 class SQLiteDatabase:
-    """One shared connection, as in the original prototype."""
+    """One connection per thread. FastAPI runs requests in parallel worker threads, and a
+    single shared sqlite3 connection mixes up their cursors (wrong rows, InterfaceError)."""
 
     def __init__(self):
-        self.conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-        self.conn.row_factory = sqlite3.Row
-        self.conn.execute("PRAGMA foreign_keys = ON")
+        self._local = threading.local()
+        self._all = []
+        self._lock = threading.Lock()
+
+    @property
+    def conn(self):
+        c = getattr(self._local, "conn", None)
+        if c is None:
+            c = sqlite3.connect(DB_PATH, timeout=10, check_same_thread=False)
+            c.row_factory = sqlite3.Row
+            c.execute("PRAGMA foreign_keys = ON")
+            c.execute("PRAGMA journal_mode = WAL")
+            self._local.conn = c
+            with self._lock:
+                self._all.append(c)
+        return c
 
     def execute(self, sql, params=()):
         return self.conn.execute(sql, params)
@@ -158,7 +173,11 @@ class SQLiteDatabase:
             raise
 
     def close(self):
-        self.conn.close()
+        with self._lock:
+            for c in self._all:
+                c.close()
+            self._all.clear()
+        self._local = threading.local()
 
 
 class _PgCursor:

@@ -1,5 +1,6 @@
 """ADA Smart Parking: MVP prototype of the Parking service that sits beside MyADA."""
 import csv
+import hashlib
 import io
 import json
 import os
@@ -10,7 +11,7 @@ from pathlib import Path
 from typing import Literal, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -83,6 +84,9 @@ async def security_headers(request: Request, call_next):
         h["Content-Security-Policy"] = CSP
     if request.url.path.startswith("/api/"):
         h["Cache-Control"] = "no-store"
+    elif request.url.path.startswith("/static/"):
+        # Fingerprinted URLs (?v=) never change; anything else revalidates so a deploy shows at once.
+        h["Cache-Control"] = "public, max-age=31536000, immutable" if "v" in request.query_params else "no-cache"
     return response
 
 
@@ -365,23 +369,26 @@ class GateEventIn(BaseModel):
 def _record_gate_event(plate: str, direction: str, gate_id: str, source: str, recorded_by=None, confidence=None):
     plate_norm = normalize_plate(plate)
     permit = conn().execute(
-        """SELECT p.id, u.full_name, u.affiliation, v.make, v.model, v.color
+        """SELECT p.id, u.full_name, u.affiliation, v.make, v.model, v.color, v.plate_display
            FROM permits p JOIN vehicles v ON v.id=p.vehicle_id JOIN users u ON u.id=p.user_id
            WHERE v.plate_normalized=? AND p.status='active' AND p.valid_until >= ?""",
         (plate_norm, iso(now())),
     ).fetchone()
     authorized = permit is not None
+    # Show the plate as registered when we know it, so "10ab123" at the gate reads "10-AB-123" everywhere.
+    display = permit["plate_display"] if authorized else plate.strip().upper()
     with db.tx(conn()) as c:
         eid = c.execute(
             """INSERT INTO gate_events (plate_display, plate_normalized, permit_id, authorized, direction, gate_id,
                                         occurred_at, source, recorded_by, confidence)
                VALUES (?,?,?,?,?,?,?,?,?,?)""",
-            (plate.strip().upper(), plate_norm, permit and permit["id"], int(authorized), direction, gate_id,
+            (display, plate_norm, permit and permit["id"], int(authorized), direction, gate_id,
              iso(now()), source, recorded_by, confidence),
         ).lastrowid
     return {
         "event_id": eid,
         "plate": plate_norm,
+        "plate_display": display,
         "authorized": authorized,
         "decision": "allow" if authorized else "check",
         "owner": permit and permit["full_name"],
@@ -630,6 +637,18 @@ def run_expiry(user=Depends(require("system_admin"))):
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 
+def _fingerprinted_index() -> str:
+    html = (STATIC / "index.html").read_text(encoding="utf-8")
+    for name in ("app.css", "app.js"):
+        v = hashlib.sha256((STATIC / name).read_bytes()).hexdigest()[:10]
+        html = html.replace(f'"/static/{name}"', f'"/static/{name}?v={v}"')
+    return html
+
+
+INDEX_HTML = _fingerprinted_index()
+
+
 @app.get("/")
 def index():
-    return FileResponse(STATIC / "index.html")
+    # Locally the files change while the server runs, so fingerprint them on every load.
+    return HTMLResponse(INDEX_HTML if DEPLOYED else _fingerprinted_index(), headers={"Cache-Control": "no-cache"})

@@ -267,3 +267,37 @@ def test_api_docs_hidden_when_deployed(monkeypatch, tmp_path):
     finally:
         monkeypatch.undo()
         importlib.reload(auth), importlib.reload(db), importlib.reload(main)
+
+
+def test_gate_shows_plate_as_registered(ctx):
+    client, login, _ = ctx
+    register_and_approve(client, login)
+    r = client.post("/api/v1/admin/gate-events", json={"plate": "10ab123", "direction": "in"}, headers=login("E3001"))
+    assert r.json()["plate_display"] == "10-AB-123"
+    log = client.get("/api/v1/admin/gate-events", headers=login("E3001")).json()
+    assert log[0]["plate_display"] == "10-AB-123"
+    r = client.post("/api/v1/admin/gate-events", json={"plate": "77 zz 777", "direction": "in"}, headers=login("E3001"))
+    assert r.json()["plate_display"] == "77 ZZ 777"
+
+
+def test_static_assets_are_fingerprinted(ctx):
+    client, _, _ = ctx
+    page = client.get("/")
+    assert page.headers["cache-control"] == "no-cache"
+    import re
+    js = re.search(r'src="(/static/app\.js\?v=[0-9a-f]{10})"', page.text).group(1)
+    assert "immutable" in client.get(js).headers["cache-control"]
+    assert client.get("/static/app.js").headers["cache-control"] == "no-cache"
+
+
+def test_parallel_requests_do_not_share_a_cursor(ctx):
+    # The owner page loads gate events and messages at the same time.
+    client, login, _ = ctx
+    register_and_approve(client, login)
+    h = login("S1001")
+    from concurrent.futures import ThreadPoolExecutor
+
+    paths = ["/api/v1/me/gate-events", "/api/v1/me/messages", "/api/v1/me"] * 30
+    with ThreadPoolExecutor(8) as pool:
+        codes = list(pool.map(lambda p: client.get(p, headers=h).status_code, paths))
+    assert set(codes) == {200}
