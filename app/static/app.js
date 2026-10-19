@@ -227,51 +227,65 @@ const table = (cols, rows) => `<div class="table"><table>
   <tbody>${rows.map(r => `<tr>${r.map((cell, i) => `<td data-label="${esc(cols[i])}"${i === r.length - 1 && cols[i] === "" ? ' class="actions-cell"' : ""}>${cell}</td>`).join("")}</tr>`).join("")}</tbody>
   </table></div>`;
 
+// The owner's permit, drawn as the same hang-tag as the sign-in screen.
+const STRIP = { active: "allow", pending: "wait", suspended: "check", expired: "check", rejected: "check", inactive: "idle" };
+function permitTag(pm, note) {
+  const head = `<div class="permit-head"><img src="/static/ada-mark.svg" alt="ADA University" width="72" height="46">
+    <span class="permit-name">SMART PARKING</span>
+    ${pm ? plate(pm.plate_display, true) : `<span class="plate-slot">No vehicle yet</span>`}</div>`;
+  if (!pm) return `<div class="permit empty"><div class="permit-main">${head}
+    <div class="permit-body"><p>${note}</p></div></div></div>`;
+  return `<div class="permit"><div class="permit-main">${head}
+    <p class="permit-strip ${STRIP[pm.status] || "idle"}">${esc(STATUS[pm.status] || pm.status)}</p>
+    <div class="permit-body"><p class="permit-car">${esc(pm.color)} ${esc(pm.make)} ${esc(pm.model)}</p>
+      <p class="permit-holder">${esc(me.user.full_name)}, ${esc(cap(me.user.affiliation))}</p>
+      <p class="permit-note">${note}</p></div></div></div>`;
+}
+
+const page = (title, extra = "") => `<header class="page-head"><h1>${esc(title)}</h1>${extra}</header>`;
+
 const VIEWS = {
   async vehicle() {
     const a = me.active_permit, p = me.pending_permit, l = me.latest_inactive_permit, c = me.change;
     const [events, msgs] = await Promise.all([api("/me/gate-events"), api("/me/messages")]);
-    let html = `<div class="card"><h2>My vehicle</h2>`;
-    if (a) {
-      html += vehicleLine(a, true) + `<p>You can park on campus until <strong>${day(a.valid_until)}</strong>.</p>`;
-    } else if (p) {
-      html += vehicleLine(p, true) + `<div class="notice warn">The parking office is reviewing your registration. You can't park on campus until it is approved.</div>`;
-    } else if (l?.status === "suspended") {
-      html += vehicleLine(l, true) + `<div class="notice bad">Your permit is suspended${l.reason ? `: ${esc(l.reason)}` : ""}. Contact the parking office to have it reinstated.</div>`;
-    } else {
-      if (l) html += vehicleLine(l) + (l.reason ? `<p class="muted">Reason: ${esc(l.reason)}</p>` : "")
-        + `<p>${l.status === "expired" ? "Your permit has expired." : ""} Register your vehicle again to get a new permit.</p>`;
-      else html += `<p>Register your vehicle to park on campus. Each ADA member can register one vehicle, and the parking office approves it.</p>`;
-      html += vehicleForm("reg", "Register vehicle");
+    let tag, side = "";
+    if (a) tag = permitTag(a, `Valid until <strong>${day(a.valid_until)}</strong>`);
+    else if (p) tag = permitTag(p, "The parking office is reviewing your registration. You can't park on campus until it is approved.");
+    else if (l?.status === "suspended") tag = permitTag(l, `Suspended${l.reason ? `: ${esc(l.reason)}` : ""}. Contact the parking office to have it reinstated.`);
+    else {
+      tag = l ? permitTag(l, (l.status === "expired" ? "This permit has expired." : "This permit is no longer valid.") + (l.reason ? ` Reason: ${esc(l.reason)}.` : ""))
+        : permitTag(null, "Register your vehicle to park on campus. Each ADA member can register one vehicle, and the parking office approves it.");
+      side += `<section class="card"><h2>${l ? "Register again" : "Register your vehicle"}</h2>${vehicleForm("reg", "Register vehicle")}</section>`;
     }
-    html += `</div>`;
     if (a) {
-      html += `<div class="card"><h2>Change vehicle</h2>`;
-      if (p) html += vehicleLine(p) + `<div class="notice">Your request is waiting for approval. Keep using ${esc(a.plate_display)} until it is approved.</div>`;
-      else if (c.allowed_now) html += `<p class="muted">${c.override_granted ? "The parking office allowed one early change." : `You can change your vehicle once every ${c.cooldown_days} days.`} The new vehicle needs approval, and your current one stays valid until then.</p>` + vehicleForm("chg", "Request change");
-      else html += `<p>You can change your vehicle once every ${c.cooldown_days} days. Your next change is possible on <strong>${day(c.next_allowed_at)}</strong>.</p><p class="muted">Sold your car or had an accident? The parking office can allow an early change.</p>`;
-      html += `</div>`;
+      side += `<section class="card"><h2>Change vehicle</h2>`;
+      if (p) side += vehicleLine(p) + `<p class="notice">Your request is waiting for approval. Keep using ${esc(a.plate_display)} until it is approved.</p>`;
+      else if (c.allowed_now) side += `<p class="muted">${c.override_granted ? "The parking office allowed one early change." : `You can change your vehicle once every ${c.cooldown_days} days.`} The new vehicle needs approval, and your current one stays valid until then.</p>` + vehicleForm("chg", "Request change");
+      else side += `<p>You can change your vehicle once every ${c.cooldown_days} days. Your next change is possible on <strong>${day(c.next_allowed_at)}</strong>.</p><p class="muted">Sold your car or had an accident? The parking office can allow an early change.</p>`;
+      side += `</section>`;
     }
-    if (msgs.length) html += `<div class="card"><h2>Messages from campus security</h2>${msgs.map(m => `<div class="message">
-      <h3>${esc(m.subject)}</h3><span class="muted">${esc(m.sender)}, ${fmt(m.created_at)}</span><p>${esc(m.body)}</p></div>`).join("")}</div>`;
-    html += `<div class="card"><h2>My entries and exits</h2>${events.length
+    if (msgs.length) side += `<section class="card"><h2>Messages from campus security</h2><ul class="messages">${msgs.map(m => `<li class="message">
+      <h3>${esc(m.subject)}</h3><span class="muted">${esc(m.sender)}, ${fmt(m.created_at)}</span><p>${esc(m.body)}</p></li>`).join("")}</ul></section>`;
+    const moves = `<section class="card"><h2>My entries and exits</h2>${events.length
       ? table(["Time", "Movement", "Plate", "Gate"], events.map(e => [fmt(e.occurred_at), e.direction === "in" ? "Entered" : "Left", plate(e.plate_display), esc(gateName(e.gate_id))]))
-      : `<p class="muted">Your entries and exits appear here once you drive through a campus gate.</p>`}</div>`;
+      : `<p class="muted">Your entries and exits appear here once you drive through a campus gate.</p>`}</section>`;
+    // With nothing else beside the permit, the movements fill that column instead of leaving it empty.
+    const html = page("My vehicle") + `<div class="owner"><div class="owner-tag">${tag}</div><div class="owner-side">${side || moves}</div></div>` + (side ? moves : "");
     $("#view").innerHTML = html;
     bindForm("reg", async v => { await api("/vehicles", { method: "POST", body: v }); toast("Vehicle sent for approval"); render(); });
     bindForm("chg", async v => { await api("/change-requests", { method: "POST", body: v }); toast("Change requested"); render(); });
   },
 
   async gate() {
-    $("#view").innerHTML = `<div class="card"><h2>Gate check</h2>
-      <form id="gate" class="row" novalidate>
-        <label class="field grow plate-input"><span>Plate number</span><input id="gp" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="16" placeholder="Type the plate" enterkeyhint="done"></label>
-        <label class="field"><span>Gate</span><select id="gg">${Object.entries(GATES).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></label>
+    $("#view").innerHTML = page("Gate check", `<label class="gate-pick"><span>Gate</span><select id="gg">${Object.entries(GATES).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></label>`)
+      + `<section class="gate-desk"><form id="gate" novalidate>
+        <label class="plate-input" for="gp"><span class="plate-input-label">Plate number</span>
+          <span class="plate-input-box"><span class="plate-az" aria-hidden="true"><i></i>AZ</span><input id="gp" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="16" placeholder="10-AB-123" enterkeyhint="done"></span></label>
       </form>
-      <div class="actions gate-buttons"><button type="button" data-action="gate" data-dir="in">Record entry</button><button type="button" class="ghost" data-action="gate" data-dir="out">Record exit</button></div>
-      <p class="muted">Press Enter to record an entry.</p>
-      <div id="gres" aria-live="polite"></div><div class="err" role="alert"></div></div>
-      <div class="card"><h2>Recent movements</h2><div id="grecent"></div></div>`;
+      <div class="gate-buttons"><button type="button" data-action="gate" data-dir="in">Record entry</button><button type="button" class="ghost" data-action="gate" data-dir="out">Record exit</button></div>
+      <p class="muted gate-hint">Press Enter to record an entry.</p>
+      <div class="err" role="alert"></div><div id="gres" aria-live="polite"></div></section>
+      <section class="card"><h2>Recent movements</h2><div id="grecent"></div></section>`;
     try { const g = sessionStorage.getItem("gate"); if (g && GATES[g]) $("#gg").value = g; } catch { /* ignore */ }
     $("#gg").onchange = () => { try { sessionStorage.setItem("gate", $("#gg").value); } catch { /* ignore */ } };
     $("#gate").onsubmit = e => { e.preventDefault(); $('[data-dir="in"]').click(); };
@@ -280,7 +294,7 @@ const VIEWS = {
   },
 
   async search() {
-    $("#view").innerHTML = `<div class="card"><h2>Find a vehicle</h2>
+    $("#view").innerHTML = page("Find a vehicle") + `<div class="card filters">
       <form id="sform" class="row" novalidate><label class="field grow"><span>Full or partial plate</span><input id="sq" placeholder="10AB" minlength="2" autocomplete="off" autocapitalize="characters" spellcheck="false"></label><button type="submit">Search</button></form>
       <div class="err" role="alert"></div></div><div id="sres" aria-live="polite"></div>`;
     $("#sform").onsubmit = e => { e.preventDefault(); busy($("#sform button"), runSearch); };
@@ -289,7 +303,7 @@ const VIEWS = {
 
   async queue() {
     const rows = await api("/admin/queue");
-    $("#view").innerHTML = `<div class="card"><div class="head"><h2>Waiting for approval</h2>${rows.length ? `<span class="muted">${rows.length} waiting</span>` : ""}</div>${rows.length
+    $("#view").innerHTML = page("Approvals", `<span class="page-count">${rows.length ? `${rows.length} waiting` : "Nothing waiting"}</span>`) + `<div class="card">${rows.length
       ? table(["Submitted", "Person", "Vehicle", "Request", ""], rows.map(r => [
           fmt(r.created_at),
           `<strong>${esc(r.full_name)}</strong><span class="sub">${esc(cap(r.affiliation))}, ${esc(r.email)}</span>`,
@@ -301,7 +315,7 @@ const VIEWS = {
   },
 
   async log() {
-    $("#view").innerHTML = `<div class="card"><h2>Gate log</h2>
+    $("#view").innerHTML = page("Gate log") + `<div class="card filters">
       <form id="lform" class="row" novalidate>
         <label class="field grow"><span>Plate</span><input id="lp" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
         <label class="field"><span>From</span><input id="lf" type="date"></label>
@@ -314,7 +328,7 @@ const VIEWS = {
 
   async audit() {
     const rows = await api("/admin/audit-log");
-    $("#view").innerHTML = `<div class="card"><h2>Rules</h2>
+    $("#view").innerHTML = page("Audit and settings") + `<div class="card"><h2>Rules</h2>
       <form id="settings" class="row" novalidate>
         <label class="field"><span>Days between vehicle changes</span><input name="days" type="number" min="0" max="365" required value="${me.change.cooldown_days}"></label>
         <button type="submit">Save</button></form><div class="err" role="alert"></div></div>
@@ -365,10 +379,10 @@ async function recordGate(btn) {
       const r = await api("/admin/gate-events", { method: "POST", body: { plate: value, direction: dir, gate_id: gate } });
       const what = `${dir === "in" ? "Entry" : "Exit"} recorded at ${esc(gateName(gate))}, ${time(new Date().toISOString())}.`;
       $("#gres").innerHTML = r.authorized
-        ? `<div class="verdict allow"><div class="verdict-word">Allow</div>
+        ? `<div class="verdict allow"><p class="verdict-word">Allow</p>
            <div class="vehicle">${plate(r.plate, true)}</div>
            <p><strong>${esc(r.owner)}</strong>, ${esc(r.affiliation)}. ${esc(r.vehicle)}.</p><p class="muted">${what}</p></div>`
-        : `<div class="verdict check"><div class="verdict-word">Check the driver</div>
+        : `<div class="verdict check"><p class="verdict-word">Check the driver</p>
            <div class="vehicle">${plate(r.plate, true)}</div>
            <p>No active permit for this plate. Ask for the driver's ADA ID before letting them in.</p><p class="muted">${what}</p></div>`;
       input.value = ""; input.focus();
@@ -384,7 +398,7 @@ async function runSearch() {
   try {
     const rows = await api("/admin/vehicles?plate=" + encodeURIComponent(q));
     const admin = has(...ADMINS);
-    $("#sres").innerHTML = rows.length ? rows.map(r => `<div class="card">
+    $("#sres").innerHTML = rows.length ? `<div class="card results">` + rows.map(r => `<article class="result">
       ${vehicleLine(r)}
       <p><strong>${esc(r.full_name)}</strong>, ${esc(r.affiliation)}${admin ? `<span class="sub">${esc(r.email)}${r.phone ? `, ${esc(r.phone)}` : ""}</span>` : ""}</p>
       <p class="muted">${r.last_event ? `Last ${r.last_event.direction === "in" ? "entered through" : "left through"} ${esc(gateName(r.last_event.gate_id))} on ${fmt(r.last_event.occurred_at)}.` : "No gate movements recorded."}${r.valid_until && r.status === "active" ? ` Permit valid until ${day(r.valid_until)}.` : ""}</p>
@@ -394,7 +408,7 @@ async function runSearch() {
         ${r.status === "active" ? `<button type="button" class="ghost" data-action="override" data-user="${r.user_id}" data-name="${esc(r.full_name)}">Allow early vehicle change</button>
           <button type="button" class="danger" data-action="suspend" data-id="${r.permit_id}" data-plate="${esc(r.plate_display)}">Suspend permit</button>` : ""}
         ${r.status === "suspended" ? `<button type="button" class="ghost" data-action="reinstate" data-id="${r.permit_id}" data-plate="${esc(r.plate_display)}">Reinstate permit</button>` : ""}
-      </div>` : ""}</div>`).join("") : `<div class="card"><p class="muted">No vehicle matches “${esc(q)}”. Check the characters and try a shorter part of the plate.</p></div>`;
+      </div>` : ""}</article>`).join("") + `</div>` : `<div class="card"><p class="muted">No vehicle matches “${esc(q)}”. Check the characters and try a shorter part of the plate.</p></div>`;
   } catch (x) { err.textContent = x.message; }
 }
 
