@@ -346,6 +346,10 @@ The toast is a navy sign (red for errors) that rises 12px into place at the bott
 ### Sign-in
 A 440px white panel whose head is a navy sign carrying the ADA crest and "Smart Parking"; the form below has a Headline, fields, a full-width 48px primary button and a forgot link. The band is hidden on this screen. Demo accounts sit below a stroke rule as quiet transparent rows with navy role chips (staff roles as solid navy chips).
 
+
+### Display switches, language and print
+Two compact controls sit in the sign band before Sign out, and above the sign-in panel: a language switch showing the other language's code (EN or AZ) and a theme switch showing the mode it offers (a moon while light, a sun while dark). Both are 34px outlined sign buttons. The theme is `data-theme` on `<html>`; without it the page follows `prefers-color-scheme`. `prefs.js` applies the saved theme and language before first paint. Azerbaijani dates are built from fixed month and weekday names rather than browser locale data. Below 1480px the section strip takes its own row in the band, so the longer Azerbaijani legends never crowd the visitor block. Printing My vehicle prints the permit alone at 90mm wide in light colours, whatever the screen theme.
+
 ### Motion
 Feedback stays at or under 150ms; state changes take 200-320ms on `cubic-bezier(.16, 1, .3, 1)` going in and `cubic-bezier(.7, 0, .84, 0)` going out. Pages rise 8px in sequence (sign, then work, capped at 80ms delay). The one authored moment is the gate: the scan line sweeps the frame once (500ms), the verdict sign lights up (450ms), its tile lands from 70% (320ms), and the typed plate flies from the input into the verdict (420ms). The slow-response bar is white over the band (navy on sign-in). Under reduced motion everything falls back to 200ms fades or holds still.
 

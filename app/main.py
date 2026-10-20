@@ -966,7 +966,7 @@ app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 def _fingerprinted_index() -> str:
     html = (STATIC / "index.html").read_text(encoding="utf-8")
-    for name in ("app.css", "app.js"):
+    for name in ("app.css", "prefs.js", "i18n.js", "app.js"):
         v = hashlib.sha256((STATIC / name).read_bytes()).hexdigest()[:10]
         html = html.replace(f'"/static/{name}"', f'"/static/{name}?v={v}"')
     return html

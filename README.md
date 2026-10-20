@@ -12,7 +12,9 @@ python3 -m uvicorn app.main:app --reload
 
 The SQLite database (`parking.db`) is created on first start and comes with six demo accounts. Delete the file to start over. Interactive API docs are at http://localhost:8000/docs.
 
-Run the tests with `python3 -m pytest -q`. There are 30 tests, covering the rules below and the input and access checks.
+Run the tests with `python3 -m pytest -q`. There are 37 tests, covering the rules below, the input and access checks, and the XSS defences (CSP, JSON-only data, verbatim storage, the client escape helper).
+
+The browser half of the XSS check stores inert markup probes in every free-text field, renders each screen in headless Chrome and fails if a probe becomes an element or the page reports a CSP violation: `node tests/browser/xss_dom_check.mjs` (uses its own temporary database; set `CHROME_PATH` if Chrome is not at the default Windows path).
 
 ## Demo accounts
 
@@ -40,6 +42,8 @@ A quick walkthrough: Leyla registers `10-AB-123`, Aysel approves it, Rashad reco
 - On campus now: a car is inside when its latest movement is an entry. Cars that entered before midnight (Baku time) are flagged as overnight, and plates with no permit stay listed until they leave. Today's expected visitors are listed with whether they have arrived.
 - Renewal: an active permit can be renewed in the last 30 days of its term (the system admin can change the window). A renewal keeps the vehicle, continues from the current end date with no gap, and needs admin approval; admins can approve all waiting renewals at once.
 - Repeat alerts: a plate that has entered without a permit or pass three or more times is flagged on the gate verdict and in plate search. It is still never blocked.
+- Display: every screen has an EN/AZ language switch and a light/dark switch (in the sign band, and above the sign-in panel). Without a saved choice the theme follows the device and the language follows the browser; choices are kept in this browser only. Azerbaijani covers the whole interface, server messages, dates and the messages campus security sends from templates. A test fails if any interface string or server message lacks a translation.
+- An owner with an active permit can print it (My vehicle, "Print permit"): the page prints the permit alone, in light colours, to place behind the windscreen.
 - The campus has one gate; the gate ID is still stored ("main") so a second gate or a camera can be added without a schema change.
 - The audit log records approvals, rejections, overrides, renewals, visitor passes, plate searches, owner contacts and setting changes.
 

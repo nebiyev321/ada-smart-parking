@@ -426,3 +426,119 @@ def test_all_registered_vehicles_list(ctx):
     assert [(r["plate_display"], r["status"]) for r in rows] == [("10-AB-123", "active"), ("90 XY 777", "pending")]
     assert "email" not in rows[0] and "phone" not in rows[0]
     assert client.get("/api/v1/admin/vehicles/all", headers=login("S1001")).status_code == 403
+
+
+# XSS regressions. The client escapes every value it puts into HTML; these tests pin the server-side
+# half: the page shell has nothing inline for an injection to ride on, the CSP forbids inline script,
+# API data is only ever served as JSON, and free text is stored verbatim (escaping happens on output).
+# tests/browser/xss_dom_check.mjs covers the rendering half in a real browser.
+PROBE = '"><i data-xss-probe="1">probe</i>'
+
+
+def test_csp_forbids_inline_script_and_plugins(ctx):
+    client, _, _ = ctx
+    csp = client.get("/").headers["content-security-policy"]
+    directives = dict(d.strip().split(" ", 1) for d in csp.split(";") if d.strip())
+    assert directives["script-src"] == "'self'"
+    assert "unsafe-inline" not in csp and "unsafe-eval" not in csp
+    for name, value in {"object-src": "'none'", "base-uri": "'none'", "frame-ancestors": "'none'", "form-action": "'self'"}.items():
+        assert directives[name] == value
+    assert directives["img-src"] == "'self' data:" and directives["connect-src"] == "'self'"
+
+
+def test_page_shell_has_nothing_inline(ctx):
+    import re
+    client, _, _ = ctx
+    html = client.get("/").text
+    assert not re.search(r"<script(?![^>]*\bsrc=)[^>]*>", html), "inline <script> in the page shell"
+    assert not re.search(r"\son[a-z]+\s*=", html, re.I), "inline event handler in the page shell"
+    assert not re.search(r"\sstyle\s*=", html, re.I), "inline style attribute in the page shell"
+    assert "javascript:" not in html.lower()
+
+
+def test_api_data_is_served_as_json_and_never_sniffed(ctx):
+    client, login, _ = ctx
+    register_and_approve(client, login)
+    for path, who in [("/api/v1/me", "S1001"), ("/api/v1/admin/vehicles/all", "E3001"), ("/api/v1/admin/gate-events", "E3001")]:
+        r = client.get(path, headers=login(who))
+        assert r.headers["content-type"].startswith("application/json")
+        assert r.headers["x-content-type-options"] == "nosniff"
+    # Error bodies are JSON too, so a reflected plate can't become a page.
+    r = client.get("/api/v1/admin/vehicles?plate=" + PROBE, headers=login("E3001"))
+    assert r.headers["content-type"].startswith("application/json")
+    csv = client.get("/api/v1/admin/gate-events?format=csv", headers=login("E3001"))
+    assert csv.headers["content-type"].startswith("text/csv") and "attachment" in csv.headers["content-disposition"]
+
+
+def test_free_text_is_stored_verbatim_for_the_client_to_escape(ctx):
+    client, login, _ = ctx
+    r = client.post("/api/v1/vehicles", json=CAR, headers=login("S1001"))
+    client.post(f"/api/v1/admin/permits/{r.json()['id']}/reject", json={"reason": PROBE}, headers=login("E3002"))
+    me = client.get("/api/v1/me", headers=login("S1001")).json()
+    assert me["latest_inactive_permit"]["reason"] == PROBE
+
+
+def test_short_text_fields_reject_markup(ctx):
+    client, login, _ = ctx
+    bad_car = dict(CAR, make='<i data-xss-probe="1">')
+    assert client.post("/api/v1/vehicles", json=bad_car, headers=login("S1001")).status_code == 422
+    bad_pass = {"plate": "77ZZ001", "guest_name": "<i>", "valid_on": "2026-10-07"}
+    assert client.post("/api/v1/visitor-passes", json=bad_pass, headers=login("S1001")).status_code == 422
+    assert client.post("/api/v1/vehicles", json=dict(CAR, plate='10"><i>'), headers=login("S1001")).status_code == 422
+
+
+def test_client_escape_helper_covers_html_and_attributes():
+    """Runs the real esc() from app.js under Node; skipped where Node isn't installed."""
+    import json
+    import re
+    import shutil
+    import subprocess
+    from pathlib import Path
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node is not installed")
+    src = (Path(__file__).parent.parent / "app" / "static" / "app.js").read_text(encoding="utf-8")
+    esc = re.search(r"^const esc = .*$", src, re.M).group(0)
+    script = esc + "\nprocess.stdout.write(JSON.stringify([esc(`<&>\"'`), esc(null), esc(undefined), esc(0)]));"
+    out = subprocess.run([node, "-e", script], capture_output=True, text=True, check=True).stdout
+    assert json.loads(out) == ["&lt;&amp;&gt;&quot;&#39;", "", "", "0"]
+
+
+def test_every_interface_string_has_an_azerbaijani_translation():
+    """Static check: what the interface translates, and what the server can say, all have AZ entries."""
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).parent.parent
+    i18n = (root / "app" / "static" / "i18n.js").read_text(encoding="utf-8")
+    app = (root / "app" / "static" / "app.js").read_text(encoding="utf-8")
+    server = (root / "app" / "main.py").read_text(encoding="utf-8") + (root / "app" / "auth.py").read_text(encoding="utf-8")
+    az_block = i18n[i18n.index("const AZ = {"):i18n.index("\n};")]
+    keys = {m.group(1).replace('\\"', '"') for m in re.finditer(r'^\s*"((?:[^"\\]|\\.)*)":\s*"', az_block, re.M)}
+
+    used = set(re.findall(r'\bt\("((?:[^"\\]|\\.)*)"', app))
+    for a, b in re.findall(r'\bt\([^()"]*\?\s*"([^"]+)"\s*:\s*"([^"]+)"', app):  # t(cond ? "a" : "b")
+        used |= {a, b}
+    for name in ("STATUS", "FIELD_NAMES"):
+        block = re.search(rf"const {name} = \{{(.*?)\}};", app, re.S).group(1)
+        used |= set(re.findall(r':\s*"([^"]+)"', block))
+    used |= set(re.findall(r'label: "([^"]+)", icon', app))                              # section names
+    used |= set(re.findall(r'\["(?:pending|active|rejected)", "([^"]+)"\]', app))          # visitor pass statuses
+    for cols in re.findall(r'table\(\s*\[([^\]]*)\]', app):                                # table columns
+        used |= {c for c in re.findall(r'"([^"]*)"', cols) if c}
+    missing = sorted(used - keys)
+    assert not missing, f"app.js strings with no Azerbaijani: {missing}"
+
+    said = set(re.findall(r'HTTPException\(\d+,\s*"([^"]+)"', server))
+    said |= set(re.findall(r'"message":\s*"([^"]+)"', server))
+    said |= set(re.findall(r'"(?:active|pending|suspended)":\s*"([^"]+)"', server))
+    said |= {"This conflicts with a change made a moment ago. Refresh and try again."}
+    missing = sorted(said - keys)
+    assert not missing, f"server messages with no Azerbaijani: {missing}"
+
+    codes = set(re.findall(r'audit\([^,]+,\s*"([a-z_]+)"', server)) | {"visitor_pass_approved", "visitor_pass_rejected"}
+    codes |= {"student", "faculty", "staff", "guard", "parking_admin", "system_admin", "permit", "user", "change_request", "visitor_pass"}
+    labels = {c.replace("_", " ").capitalize() for c in codes}
+    missing = sorted(labels - keys)
+    assert not missing, f"codes shown as words with no Azerbaijani: {missing}"

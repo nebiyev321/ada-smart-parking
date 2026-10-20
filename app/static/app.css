@@ -22,8 +22,20 @@
 }
 /* Rules are one device pixel wherever the screen can draw one */
 @media (min-resolution: 2dppx) { :root { --hair: .5px; } }
+/* Dark: chosen with the theme switch (data-theme on <html>), or following the device when nothing is chosen */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --navy: #3b6fd8; --navy-deep: #2c5bbd; --navy-ink: #9dbaf5; --navy-soft: #16264a;
+  --sign: #0d2f70; --sign-deep: #0a2457; --sign-muted: #9fb3dc;
+  --hall: #08111f; --surface: #0f1a2e; --surface-2: #132038;
+  --ink: #e6ecf6; --muted: #98a6c0; --line: #213050; --stroke: #3a4a6a;
+  --allow: #5fd396; --allow-soft: rgba(56, 180, 115, .15); --allow-sign: #0f7b45;
+  --check: #ff8a8f; --check-soft: rgba(230, 70, 80, .15); --check-sign: #b8232b;
+  --wait: #ffc56b; --wait-soft: rgba(255, 180, 60, .14);
+  --idle-soft: #1a2640;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --navy: #3b6fd8; --navy-deep: #2c5bbd; --navy-ink: #9dbaf5; --navy-soft: #16264a;
     --sign: #0d2f70; --sign-deep: #0a2457; --sign-muted: #9fb3dc;
@@ -76,6 +88,8 @@ nav a:focus-visible { outline-offset: -4px; box-shadow: none; }
 .who .person { font-weight: 600; }
 .who .role { color: var(--sign-muted); }
 .who .role.extra::before { content: ""; display: inline-block; width: 3px; height: 3px; margin: 0 8px 3px 0; border-radius: 50%; background: currentColor; }
+.pref { min-width: 34px; padding: 4px 8px !important; font-size: .82rem !important; letter-spacing: .04em; }
+.pref .ico { width: 18px; height: 18px; }
 .top button { min-height: 34px; padding: 4px 12px; background: transparent; border-color: rgba(255, 255, 255, .45); color: #fff; font-size: .9rem; }
 .top button:hover { background: rgba(255, 255, 255, .1); border-color: #fff; }
 .top :focus-visible { box-shadow: none; }
@@ -296,6 +310,9 @@ td.actions-cell button { margin-left: 6px; }
 .verdict-action { margin: 4px 0 6px; background: #fff; border-color: #fff; color: #b8232b; }
 .verdict-action:hover { background: #fbe9ea; border-color: #fbe9ea; }
 
+.print-permit { margin-top: 16px; width: 100%; }
+.print-permit .ico { width: 18px; height: 18px; }
+
 /* Find a vehicle: results share one surface */
 .results { padding: 0 24px; }
 .result { padding: 22px 0; border-top: var(--hair) solid var(--line); }
@@ -315,6 +332,9 @@ td.actions-cell button { margin-left: 6px; }
 body[data-screen="login"] .top { display: none; }
 body[data-screen="login"] main { max-width: none; padding: 0; }
 .signin { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; padding: clamp(24px, 9vh, 96px) 16px 48px; }
+.signin-prefs { width: min(440px, 100%); display: flex; justify-content: flex-end; gap: 6px; margin: -12px 0 12px; }
+.signin-prefs .pref { min-height: 34px; background: transparent; color: var(--navy-ink); border-color: var(--stroke); }
+.signin-prefs .pref:hover { background: var(--navy-soft); border-color: var(--navy-ink); }
 .signin-panel { width: min(440px, 100%); background: var(--surface); border: var(--hair) solid var(--line); border-radius: var(--r); overflow: hidden; }
 .signin-sign { position: relative; background: var(--sign); color: #fff; text-align: center; padding: 34px 24px 26px; }
 .signin-mark { display: block; width: 176px; height: auto; margin: 0 auto; }
@@ -357,7 +377,8 @@ dialog::backdrop { background: rgba(8, 20, 45, .55); backdrop-filter: blur(2px);
 dialog .actions { justify-content: flex-end; }
 
 /* Layout below tablet and phone widths */
-@media (max-width: 980px) {
+/* The section strip takes its own row once the band is too narrow for brand, sections and the visitor together */
+@media (max-width: 1480px) {
   .top { flex-wrap: wrap; padding: 0 16px; }
   .brand { min-height: 56px; }
   nav { order: 3; flex: 1 0 100%; margin: 0 -16px; padding: 0 2px; border-top: 1px solid rgba(255, 255, 255, .14); }
@@ -418,6 +439,22 @@ dialog .actions { justify-content: flex-end; }
   .demo-roles { grid-column: 1; grid-row: auto; justify-content: flex-start; max-width: none; margin-top: 4px; }
 }
 @media (pointer: fine) { .demo-list .demo { min-height: 44px; } }
+
+/* Printing My vehicle gives the permit alone, to place behind the windscreen */
+@media print {
+  /* Paper is white whatever the screen theme */
+  :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+    color-scheme: light; --hall: #fff; --surface: #fff; --ink: #0e1a2e; --muted: #56627a; --line: #dfe4ec;
+    --sign: #0b3d91; --sign-muted: #b9c8e6; --allow: #0f7b45; --allow-soft: #e2f3e9; --wait: #8a5300; --wait-soft: #fff2d6;
+    --check: #b8232b; --check-soft: #fbe9ea; --idle-soft: #edf0f4;
+  }
+  body { background: #fff; }
+  .top, nav, .skip, .page-head, .owner-side, .ledger, .print-permit, #toast, dialog { display: none !important; }
+  main { padding: 0; }
+  .owner { display: block; }
+  .permit { width: 90mm; margin: 0 auto; border: 1px solid #999; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #view.enter > * { animation: none; }
+}
 
 /* Motion. Feedback stays fast (≤150ms), state changes 200–320ms; the one authored moment is the gate:
    the scanner sweeps, the verdict sign lights, the typed plate flies in. Content is visible by default,
