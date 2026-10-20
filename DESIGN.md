@@ -1,410 +1,370 @@
 ---
 name: ADA Smart Parking
-description: ADA University's campus parking-permit service, run beside MyADA.
+description: ADA University's campus parking-permit service, signed like an airport terminal.
 colors:
-  navy: "#0b3d91"
-  navy-deep: "#082d6b"
-  navy-soft: "#e8eefa"
-  navy-soft-line: "#c6d3ee"
-  paper: "#f3f5f8"
+  sign-navy: "#0b3d91"
+  navy-deep: "#07265e"
+  navy-soft: "#e9effa"
+  sign-muted: "#b9c8e6"
+  wayfinding-yellow: "#ffc72c"
+  hall: "#f4f6fa"
   surface: "#ffffff"
-  ink: "#17202e"
-  muted: "#556072"
-  line: "#d9dee7"
-  field-stroke: "#b9c1ce"
-  hanger-steel: "#8a96aa"
-  signin-slate: "#527a8e"
-  signin-ground: "#a9bcc6"
-  signin-field: "#dfe7f3"
-  allow: "#12723c"
-  allow-soft: "#e3f4ea"
-  check: "#b42318"
-  check-soft: "#fdecea"
-  wait: "#8a5100"
-  wait-soft: "#fff1da"
-  focus: "#f0b400"
-  plate-ink: "#111111"
-  flag-blue: "#00b5e2"
-  flag-red: "#ef3340"
-  flag-green: "#509e2f"
+  ink: "#0e1a2e"
+  muted: "#56627a"
+  line: "#dfe4ec"
+  stroke: "#b4bdcc"
+  allow: "#0f7b45"
+  allow-soft: "#e2f3e9"
+  check: "#b8232b"
+  check-soft: "#fbe9ea"
+  wait: "#8a5300"
+  wait-soft: "#fff2d6"
+  idle-soft: "#edf0f4"
+  plate-white: "#ffffff"
+  plate-black: "#111111"
+  plate-placeholder: "#6b7385"
+  plate-rim: "#c3cad6"
+  dark-hall: "#08111f"
+  dark-surface: "#0f1a2e"
+  dark-sign: "#0d2f70"
+  dark-navy: "#3b6fd8"
+  dark-navy-ink: "#9dbaf5"
+  dark-ink: "#e6ecf6"
+  dark-muted: "#98a6c0"
+  dark-line: "#213050"
 typography:
   display:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
-    fontSize: "3rem"
-    fontWeight: 600
-    lineHeight: 1
-    letterSpacing: "0.04em"
-    fontFeature: "tnum"
-  plate:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
-    fontSize: "1.05rem"
-    fontWeight: 600
-    lineHeight: 1
-    letterSpacing: "0.06em"
-  plate-lg:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
-    fontSize: "2rem"
-    fontWeight: 600
-    lineHeight: 1
-    letterSpacing: "0.06em"
-  tag-mark:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
-    fontSize: "1.3rem"
-    fontWeight: 600
-    letterSpacing: "0.24em"
-  role-label:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
-    fontSize: "0.74rem"
-    fontWeight: 600
-    letterSpacing: "0.1em"
+    fontFamily: "Overpass, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "clamp(2rem, 4.4vw, 2.75rem)"
+    fontWeight: 300
+    lineHeight: 1.05
+    letterSpacing: "-0.025em"
   verdict:
-    fontFamily: "Source Sans 3, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "2rem"
+    fontFamily: "Overpass, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "clamp(2.4rem, 7vw, 3.5rem)"
     fontWeight: 700
-    lineHeight: 1.1
+    lineHeight: 1
+    letterSpacing: "-0.02em"
   headline:
-    fontFamily: "Source Sans 3, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "1.5rem"
-    fontWeight: 700
-    lineHeight: 1.2
-    letterSpacing: "-0.01em"
+    fontFamily: "Overpass, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "1.75rem"
+    fontWeight: 300
+    lineHeight: 1.1
+    letterSpacing: "-0.02em"
   title:
-    fontFamily: "Source Sans 3, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "1.25rem"
-    fontWeight: 700
-    lineHeight: 1.2
-  subtitle:
-    fontFamily: "Source Sans 3, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "1.05rem"
+    fontFamily: "Overpass, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "1.125rem"
     fontWeight: 600
     lineHeight: 1.2
+    letterSpacing: "-0.005em"
   body:
-    fontFamily: "Source Sans 3, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "1rem"
+    fontFamily: "Overpass, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "16px"
     fontWeight: 400
-    lineHeight: 1.5
+    lineHeight: 1.55
+    fontFeature: "tnum"
   label:
-    fontFamily: "Source Sans 3, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "0.875rem"
-    fontWeight: 600
-  status:
-    fontFamily: "Source Sans 3, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontFamily: "Overpass, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "0.85rem"
     fontWeight: 600
+    lineHeight: 1.55
+  table-head:
+    fontFamily: "Overpass, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "0.8rem"
+    fontWeight: 600
+  plate:
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
+    fontSize: "calc(var(--u) * 92)"
+    fontWeight: 500
+    lineHeight: 1
+  permit-term:
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
+    fontSize: "1.05rem"
+    fontWeight: 600
+    lineHeight: 1
+    letterSpacing: "0.06em"
 rounded:
-  chip: "3px"
-  plate: "5px"
-  control: "6px"
-  card: "8px"
-  stub: "14px"
-  tag: "22px"
-  pill: "999px"
+  tile: "2px"
+  r: "4px"
 spacing:
-  xs: "4px"
-  sm: "10px"
+  xs: "6px"
+  sm: "12px"
   md: "16px"
   lg: "20px"
   xl: "24px"
-  2xl: "32px"
+  2xl: "28px"
+  3xl: "40px"
 components:
-  header-band:
-    backgroundColor: "{colors.navy}"
-    textColor: "{colors.surface}"
-    padding: "12px 20px"
   button-primary:
-    backgroundColor: "{colors.navy}"
+    backgroundColor: "{colors.sign-navy}"
     textColor: "{colors.surface}"
-    rounded: "{rounded.control}"
-    padding: "9px 16px"
-    height: "40px"
+    rounded: "{rounded.r}"
+    padding: "10px 18px 8px"
+    height: "44px"
   button-primary-hover:
     backgroundColor: "{colors.navy-deep}"
   button-ghost:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.navy}"
-    rounded: "{rounded.control}"
-    padding: "9px 16px"
+    backgroundColor: "transparent"
+    textColor: "{colors.sign-navy}"
+    rounded: "{rounded.r}"
+    padding: "10px 18px 8px"
+    height: "44px"
   button-ghost-hover:
     backgroundColor: "{colors.navy-soft}"
   button-danger:
-    backgroundColor: "{colors.surface}"
+    backgroundColor: "transparent"
     textColor: "{colors.check}"
-    rounded: "{rounded.control}"
-    padding: "9px 16px"
-  button-danger-hover:
-    backgroundColor: "{colors.check-soft}"
-  button-danger-solid:
-    backgroundColor: "{colors.check}"
-    textColor: "{colors.surface}"
-    rounded: "{rounded.control}"
-  input-field:
+    rounded: "{rounded.r}"
+    padding: "10px 18px 8px"
+    height: "44px"
+  input:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.control}"
-    padding: "9px 11px"
-  plate-input:
-    typography: "{typography.plate-lg}"
-    padding: "8px 14px"
-  nav-tab:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.muted}"
-    padding: "13px 14px 10px"
-  nav-tab-active:
-    textColor: "{colors.navy}"
+    rounded: "{rounded.r}"
+    padding: "10px 12px 8px"
+    height: "44px"
   card:
     backgroundColor: "{colors.surface}"
-    rounded: "{rounded.card}"
-    padding: "20px"
+    rounded: "{rounded.r}"
+    padding: "24px"
+  sign-band:
+    backgroundColor: "{colors.sign-navy}"
+    textColor: "{colors.surface}"
+    height: "60px"
+    padding: "0 24px"
+  sign-tile:
+    backgroundColor: "{colors.sign-navy}"
+    textColor: "{colors.surface}"
+    rounded: "{rounded.r}"
+    size: "48px"
+  status:
+    rounded: "{rounded.tile}"
+    padding: "3px 9px 1px"
+    typography: "{typography.label}"
   status-active:
     backgroundColor: "{colors.allow-soft}"
     textColor: "{colors.allow}"
-    typography: "{typography.status}"
-    rounded: "{rounded.pill}"
-    padding: "1px 10px"
   status-pending:
     backgroundColor: "{colors.wait-soft}"
     textColor: "{colors.wait}"
-    rounded: "{rounded.pill}"
-  status-check:
+  status-void:
     backgroundColor: "{colors.check-soft}"
     textColor: "{colors.check}"
-    rounded: "{rounded.pill}"
-  plate:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    typography: "{typography.plate}"
-    rounded: "{rounded.plate}"
-  plate-label:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.plate-ink}"
   verdict-allow:
-    backgroundColor: "{colors.allow-soft}"
-    textColor: "{colors.allow}"
-    typography: "{typography.verdict}"
-    rounded: "{rounded.card}"
-    padding: "18px 20px"
-  verdict-check:
-    backgroundColor: "{colors.check-soft}"
-    textColor: "{colors.check}"
-    typography: "{typography.verdict}"
-    rounded: "{rounded.card}"
-    padding: "18px 20px"
-  notice:
-    backgroundColor: "{colors.navy-soft}"
-    rounded: "{rounded.control}"
-    padding: "12px 14px"
-  signin-panel:
-    backgroundColor: "{colors.signin-slate}"
+    backgroundColor: "{colors.allow}"
     textColor: "{colors.surface}"
-    rounded: "0"
-    width: "462px"
-  signin-field:
-    backgroundColor: "{colors.signin-field}"
-    textColor: "{colors.ink}"
-    height: "48px"
-  demo-row:
-    textColor: "{colors.ink}"
-    rounded: "{rounded.control}"
-    padding: "6px 10px"
-    height: "44px"
-  demo-row-hover:
+    rounded: "{rounded.r}"
+    padding: "24px"
+  verdict-check:
+    backgroundColor: "{colors.check}"
+    textColor: "{colors.surface}"
+    rounded: "{rounded.r}"
+    padding: "24px"
+  verdict-tile:
     backgroundColor: "{colors.surface}"
-  role-plate-affiliation:
-    backgroundColor: "{colors.navy-soft}"
-    textColor: "{colors.navy}"
-    typography: "{typography.role-label}"
-    rounded: "{rounded.chip}"
-    padding: "1px 7px"
-  role-plate-staff:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    typography: "{typography.role-label}"
-    rounded: "{rounded.chip}"
-    padding: "1px 7px"
+    rounded: "{rounded.tile}"
+    size: "72px"
+  plate:
+    backgroundColor: "{colors.plate-white}"
+    textColor: "{colors.plate-black}"
+    height: "30px"
+    width: "calc(var(--u) * 520)"
+  plate-lg:
+    height: "58px"
+  plate-input:
+    backgroundColor: "{colors.plate-white}"
+    textColor: "{colors.plate-black}"
+    height: "clamp(78px, 13vw, 104px)"
+    padding: "0 calc(var(--u) * 14) 0 calc(var(--u) * 80)"
 ---
 
 # Design System: ADA Smart Parking
 
 ## Overview
 
-**Creative North Star: "The Campus Permit"**
+**Creative North Star: "Terminal Wayfinding"**
 
-ADA Smart Parking looks like the paperwork of parking made trustworthy: a navy ADA band across the top, white working cards on a cool paper ground, and the two physical objects a driver already knows, the Azerbaijani number plate and the permit hang-tag, rendered as interface. The world is an institutional campus service, not a SaaS product. It earns trust by looking like part of ADA (the logomark and ADA navy are binding) and by staying plain everywhere the physical objects don't appear.
+The campus gate is a terminal. Every screen says where you are and where to go in the calm, bright language of airport signage: navy sign panels carry white legends, a single wayfinding yellow marks "you are here", and work happens on a bright, quiet hall floor. The system answers a request for something "more futuristic and also minimalistic" with signage rather than effects: light, wide headings, one-device-pixel rules, square pictogram tiles, and one authored moment at the gate where a scan line sweeps the plate and the verdict lights up like a backlit sign.
 
-Density is moderate and practical. Owners and admins read tables and cards on desktop and phone; guards act at the gate on a phone, so the gate-check surface goes large (2rem plate input, 56px gate buttons, 2rem verdict word). Colour carries meaning: navy is ADA and action, and three status hues (allow green, check red, wait amber) carry every state, always as a soft tint plus a strong ink, never as decoration.
+Density is moderate and administrative. Pages are a single 1080px column; records read as ledgers straight off the hall floor, and white surfaces appear only where you act. Light is the default; dark mode follows the operating system automatically and keeps the same sign logic with a deeper navy.
 
-The signature is object fidelity. Plates follow the Azerbaijani national standard (AZS 599: flag, outlined AZ label, DIN-style characters centred in the field, bar separators); the sign-in mirrors the MyADA sign-in panel. Motion is authored around a few moments: the sign-in panel lifts away on sign-in, the owner's permit swings once, and at the gate the typed plate flies into the verdict. Everything else moves only to acknowledge an action or explain a change of state.
+The ADA logomark and ADA blue are binding brand commitments; the navy sign is that blue. The world refuses the grey SaaS card dashboard and the dark neon HUD.
 
 **Key Characteristics:**
-- ADA navy band header; paper ground; flat white cards with hairline borders.
-- Two families: Source Sans 3 for all UI, Barlow Semi Condensed (600, tracked) only for plate-like codes.
-- Status is a fixed triad (allow / check / wait), each a soft tint with a strong ink.
-- Physical objects (number plate, hang-tag) are the only expressive components.
-- Amber focus ring (3px) everywhere; motion is authored on the physical objects and is feedback-only elsewhere, with a fade or static path under reduced motion.
+- A navy sign band with white section legends; the current one carries a 4px yellow bar.
+- Light (300) Overpass page headings beside a navy pictogram tile, standing on a hairline.
+- Hairlines are one device pixel; corners are 4px, tiles 2px.
+- White cards for actions, ruled ledgers for records.
+- Real Azerbaijani number plates drawn to AZS 599-2015 in Barlow Semi Condensed.
+- The gate verdict is a solid lit sign: green Allow or red Check the driver.
 
 ## Colors
 
-A restrained institutional palette: one brand blue, cool blue-grey neutrals, and a three-hue status set that does all the semantic work.
+A navy-and-white signage palette on a cool hall, with one yellow that only ever means location, and three traffic states kept for meaning.
 
 ### Primary
-- **ADA Navy** (navy): the header band, primary buttons, the hang-tag head, active nav tab, links and the tag's caret colour. It is ADA's identity colour and is binding.
-- **Deep Navy** (navy-deep): hover state for navy buttons and links only.
-- **Navy Mist** (navy-soft): ghost-button hover, info notices, the affiliation role plate fill. Its edge companion **Mist Line** (navy-soft-line) borders role plates and is the text-selection colour.
-- **Plate Ink** (plate-ink) and the **flag colours** (flag-blue, flag-red, flag-green): the number plate only. The flag colours never appear as UI colours.
+- **Sign Navy** (`sign-navy`): the sign band, page sign tiles, the permit sign, primary buttons, toast and links in light mode. It is ADA blue, so it is binding. In dark mode the band drops to Night Sign (`dark-sign`) and interactive navy lifts to `dark-navy`, with links and focus accents in `dark-navy-ink`.
+- **Deep Navy** (`navy-deep`): primary button hover only.
+- **Navy Mist** (`navy-soft`): ghost button hover, notices, the entry/exit button tile on ghost buttons, demo role chips.
+- **Legend Mute** (`sign-muted`): inactive legends and secondary text on navy (nav links, the role, the permit term).
 
-### Tertiary (status)
-- **Allow Green** (allow / allow-soft): active permits and the Allow gate verdict.
-- **Check Red** (check / check-soft): rejected, suspended, expired, no permit; the "Check the driver" verdict; errors, invalid fields and danger buttons.
-- **Wait Amber** (wait / wait-soft): pending approval and warning notices.
-- **Focus Amber** (focus): the 3px focus ring on every interactive element. Not a status colour.
+### Secondary
+- **Wayfinding Yellow** (`wayfinding-yellow`): exactly three uses. The 4px "you are here" bar under the current nav legend, the 3px focus ring, and text selection (with ink text).
+
+### Tertiary
+- **Allow Green** (`allow`) with **Allow Tint** (`allow-soft`): active permits, the Allow verdict sign, the validity bar fill, fresh-allow row flashes. The verdict sign keeps `#0f7b45` in both schemes; text uses a lighter green (`#5fd396`) in dark mode.
+- **Check Red** (`check`) with **Check Tint** (`check-soft`): rejected, suspended, expired, the Check the driver verdict, errors, danger buttons. The verdict sign keeps `#b8232b` in both schemes.
+- **Wait Amber** (`wait`) with **Wait Tint** (`wait-soft`): pending states and warning notices.
+- **Idle Tint** (`idle-soft`): inactive permits and the empty track of the validity bar.
 
 ### Neutral
-- **Campus Paper** (paper): page ground behind cards and behind the hang-tag.
-- **Surface White** (surface): cards, inputs, dialogs, the tag body.
-- **Ink** (ink): body text, plate border and numerals, toast background.
-- **Slate** (muted): secondary text, field labels, table headers, inactive nav tabs.
-- **Hairline** (line): card borders, table rules, nav underline.
-- **Field Stroke** (field-stroke): input borders and input placeholder text.
-- **Hanger Steel** (hanger-steel): the hang-tag's cord and the outline of staff role plates.
+- **Hall** (`hall`): the page ground. Ledgers sit directly on it.
+- **Surface White** (`surface`): cards, the permit body, dialog, inputs, the sign-in panel.
+- **Ink** (`ink`): body text, the 1px rule under ledger headers, the inner ring of focus.
+- **Slate** (`muted`): secondary text, field labels, table headers, scanner brackets at rest.
+- **Hairline** (`line`): card borders, table row rules, page-head rule.
+- **Field Stroke** (`stroke`): input borders, ghost button borders, the demo-panel rule.
+- **Plate White / Plate Black / Plate Rim** (`plate-white`, `plate-black`, `plate-rim`): the number plate only; fixed in both schemes because a plate is a physical object. `plate-placeholder` is the "00-AA-000" hint in the gate input.
 
 ### Named Rules
-**The Tint-and-Ink Rule.** Every status appears as its soft tint behind its strong ink (green on green-soft, red on red-soft, amber on amber-soft). Never a solid status block with white text, except the deliberate danger-solid confirm button.
+**The You-Are-Here Rule.** Wayfinding yellow marks location (the current nav legend), focus, and selection. Nothing else: no yellow edges, loading bars, buttons, badges or highlights.
 
-**The Flag Is Not A Palette Rule.** The flag colours belong to the plate's flag. UI blue is always ADA Navy.
+**The Lit Sign Rule.** Solid colour fields are signs: navy for place, green or red for the gate verdict. Status everywhere else is a tint behind coloured ink with a small lit square.
 
 ## Typography
 
-**UI Font:** Source Sans 3 (with system-ui, -apple-system, Segoe UI, sans-serif)
-**Plate Font:** Barlow Semi Condensed 600 (with Arial Narrow, sans-serif)
+**Display Font:** Overpass (with system-ui, -apple-system, Segoe UI, sans-serif)
+**Body Font:** Overpass
+**Plate Font:** Barlow Semi Condensed (with Arial Narrow, sans-serif), only on number plates and the permit term
 
-**Character:** a clear, humanist campus-service sans for everything you read, and a condensed, tracked plate face for everything that would be stamped or embossed on a physical object.
+**Character:** Overpass is a highway-signage face; set light and wide it reads as calm terminal signage, set bold it reads as a verdict at arm's length. Barlow Semi Condensed stands in for the DIN 1451 Mittelschrift of real plates and never leaves them.
 
 ### Hierarchy
-- **Display** (Barlow SC 600, 3rem, line-height 1, tabular numerals): the permit year on the hang-tag head (e.g. 2026/27).
-- **Plate / Plate Large** (Barlow SC 600, 1.05rem or 2rem, 0.06em tracking): number-plate numerals; the large size on the gate check and its input (2rem, 0.08em, uppercase), shrinking to 1.6rem under 640px.
-- **Tag Mark** (Barlow SC 600, 1.3rem, 0.24em tracking, uppercase text): "SMART PARKING" on the tag head.
-- **Role Label** (Barlow SC 600, 0.74rem, 0.1em, uppercase): role plates in the demo panel.
-- **Verdict** (Source Sans 3 700, 2rem, line-height 1.1): "Allow" / "Check the driver" at the gate, sentence case.
-- **Headline** (700, 1.5rem, -0.01em): the sign-in heading.
-- **Title** (700, 1.25rem): card headings (h2). **Subtitle** (600, 1.05rem): h3.
-- **Body** (400, 16px, line-height 1.5): everything else.
-- **Label** (600, 0.875rem): field labels, in Slate in the app and in Ink on the tag.
-- **Status** (600, 0.85rem): status pills and table headers.
+- **Display** (300, clamp(2rem, 4.4vw, 2.75rem), 1.05, -0.025em): the page sign heading beside its pictogram tile.
+- **Verdict** (700, clamp(2.4rem, 7vw, 3.5rem), 1, -0.02em): "Allow" / "Check the driver" only; 2.1rem under 640px.
+- **Headline** (300, 1.75rem, 1.1): the sign-in heading.
+- **Title** (600, 1.125rem, 1.2): card and ledger headings (h2); h3 is 600 at 1rem.
+- **Body** (400, 16px, 1.55, tabular numerals throughout).
+- **Label** (600, 0.85rem, Slate): field labels; table headers 600 at 0.8rem; status legends 600 at 0.82rem. Sentence case, no tracking.
+- **Plate** (500, 92 plate-millimetres on the plate's own unit, line-height 1): plate characters, trimmed to cap height.
 
 ### Named Rules
-**The Stamped Code Rule.** Barlow Semi Condensed is for codes printed on objects: plate numbers, permit year, tag mark, role plates. Headings, labels and body copy are always Source Sans 3.
+**The Light Sign Rule.** Page headings are light (300) and wide, never bold; weight is reserved for the verdict.
+
+**The Plates Only Rule.** Barlow Semi Condensed appears only on plates and the permit term.
 
 ## Layout
 
-A single centred column: `main` is capped at 1000px with a 16px side gutter, 24px top and 64px bottom margins. Cards stack with 16px between them and 20px internal padding (16px under 640px). Form grids auto-fit columns of at least 170px with a 14px gap; action rows use a 10px gap and wrap. The header band is a full-width flex row that wraps; under 640px the user block drops to its own line and extra role chips hide. The section nav is a horizontally scrolling tab strip with hidden scrollbar.
+One centred column, max 1080px, padded 40px 24px 72px (28px 16px 64px under 760px). The sticky sign band spans the viewport at a 60px minimum; under 980px the nav wraps to its own full-width row (46px legends) beneath the brand, separated by a faint white rule, and scrolls horizontally with the current legend centred.
 
-Tables collapse below 640px into stacked records: the header row is hidden, each cell becomes a two-column grid (7.5em label from `data-label`, then value), and action buttons left-align.
+Each page opens with the page sign: tile and heading, optional tail (a count, or a page-wide action such as "Approve all renewals") pushed right, 20px below to a hairline, then 28px to the work. Work stacks as cards (20px apart) and ledgers (36px below). Form grids auto-fit 170px columns at 16px gaps. My vehicle is a 360px permit column beside a flexible side column (28px gap); Gate check is the scanner beside a 260-340px button column (32px gap). Both collapse to one column under 760px; the gate buttons then sit side by side, and under 640px stack icon over label at 88px.
 
-The sign-in screen drops the column and the header band: the MyADA-style panel is centred, `min(462px, 100%)` wide with a 16px gutter, 10vh from the top (24px on phones), with the demo panel 18px below it. Under 480px the panel padding narrows to 22px; under 400px demo rows stack their role plates under the name. On fine pointers demo rows may shrink to 40px; touch keeps 44px.
+Under 640px tables become stacked records: headers move off-screen, each cell shows its label in a 6.5em column, and the plate leads every record.
+
+Spacing steps observed in use: 6, 12, 16, 20, 24, 28, 40px.
 
 ## Elevation & Depth
 
-Flat by default. Cards, inputs, tables, nav and the header band carry no shadow; depth comes from the paper ground against white surfaces and 1px hairlines. Shadows appear only on things that physically float above the page.
+Flat. Surfaces sit on the hall with a one-pixel hairline and no shadow; depth is conveyed by the navy sign versus the white surface versus the hall. Only two things float.
 
 ### Shadow Vocabulary
-- **Hanging permit** (`filter: drop-shadow(0 10px 22px rgba(11,61,145,.16)) drop-shadow(0 2px 4px rgba(23,32,46,.1))`): the owner's permit tag only. A drop-shadow filter so the shadow follows the masked silhouette, hole and notches included.
-- **Toast** (`box-shadow: 0 6px 24px rgba(23,32,46,.25)`): the transient toast.
-- **Dialog** (`box-shadow: 0 20px 60px rgba(23,32,46,.35)`): modal dialogs, over a 50% Ink backdrop.
+- **Toast** (`box-shadow: 0 8px 28px rgba(8, 20, 45, .28)`): the transient navy toast at the bottom centre.
+- **Dialog** (`box-shadow: 0 24px 64px rgba(8, 20, 45, .32)`): modal dialog, over a `rgba(8, 20, 45, .55)` backdrop with a 2px blur.
+- **Scan line** (`box-shadow: 0 0 14px 2px` navy at 45%): the glow on the scanner's sweep line during its single pass; not a surface shadow.
+- **Plate rim** (`box-shadow: 0 0 0 1px #c3cad6`): the plate's outline so a white plate reads on a white card.
 
 ### Named Rules
-**The Only-What-Floats Rule.** A shadow means the object is not on the page: a hanging tag, a toast, a dialog. Cards and panels stay flat.
+**The Nothing Floats Rule.** Toast and dialog are the only elevated things. Cards, permits, verdicts and sign-in are flat.
+
+**The One Device Pixel Rule.** Rules are `1px`, or `.5px` at 2dppx and above, so every hairline is one device pixel.
 
 ## Shapes
 
-Gentle, utilitarian corners: 6px on controls (buttons, inputs, notices, demo rows), 8px on cards, verdicts, dialogs and toasts, full pills for status and header role chips. Physical objects get their own geometry: plates use a 5px corner and a 2px Ink border; role plates a 3px corner and 1px border. The hang-tag is cut, not just rounded: a 22px top radius, an 18px punched hanger hole and 20px half-circle notches at the perforation, all done with CSS masks, a 2px dashed tear line inset 14px, and a 14px bottom radius on the stub. Verdicts and messages mark their meaning with a thick left rule (8px and 4px).
+Square-shouldered. A 4px radius on buttons, inputs, cards, permits, verdict signs, the sign tile, notices and dialogs; 2px on inner tiles (status legends, button icon tiles, the verdict pictogram tile, role chips). The status legend leads with a 7px square, the permit state with a 10px square: lit squares, not dots. Pictograms are stroked line drawings on one 24-unit grid (1.75 stroke at 20px; 1.6 at 34px in the sign tile; 2-2.2 on gate buttons and verdict). The validity bar is a 6px square-ended bar.
+
+Number plates are the one curved silhouette, and they follow AZS 599-2015 Type I exactly: 520 x 110 units (`--u` is one millimetre at the rendered height), corner R13, a 4.5-unit black border strip inset 3 units, a 42 x 21 flag at (25, 17), a 58 x 44 "AZ" RFID label at 16 from the left and 17 from the bottom, characters 92 units on a cap-trimmed line, 5 units apart, centred as one group in the field right of the flag band; separators are 15 x 10 bars with 8 units either side.
 
 ## Components
 
-### Header Band
-The ADA navy band across every screen: "MyADA" in bold plus "Smart Parking", user name and role chips on the right (translucent white pills), and header buttons as white outlines that fill to 10% white on hover. On sign-in only the brand shows.
-
 ### Buttons
-- **Shape:** gently rounded (6px), minimum 40px tall, 600 weight at 1rem.
-- **Primary:** ADA Navy fill, white text, navy border; Deep Navy on hover.
-- **Ghost:** white with navy text and border; Navy Mist on hover.
-- **Danger:** white with Check Red text and border, Check Soft on hover; **Danger Solid** is a red fill for final confirms.
-- **Busy / Disabled:** 65% opacity with a progress cursor while busy; not-allowed cursor when disabled.
-- **Gate buttons:** 1.15rem, 14px 32px padding, 56px tall, flexing to share the row.
-- **Focus:** 3px Focus Amber outline, 2px offset.
+Calm, solid, signed.
+- **Shape:** 4px corners, 44px minimum height, padding 10px 18px 8px (the 2px bottom offset centres Overpass caps), 600 at 0.95rem.
+- **Primary:** Sign Navy fill, white legend; Deep Navy on hover.
+- **Ghost:** transparent with Field Stroke border and navy legend; Navy Mist fill and navy border on hover.
+- **Danger:** transparent with Check Red border and legend; Check Tint on hover. A solid red variant exists for confirming destructive dialogs.
+- **On the band:** transparent with a 45% white border, 34px tall.
+- **Press / busy:** scale .97 on press; busy buttons dim to 65% and show a spinner after 150ms.
 
-### Inputs / Fields
-- **Style:** white, 1px Field Stroke border, 6px radius, 9px 11px padding, inherited font. Labels sit above in Label type; hints below at 0.8rem Slate.
-- **Focus:** 3px Focus Amber outline at 0 offset plus an Ink border.
-- **Error:** Check Red border (`aria-invalid`); error text in Check Red 600 below the form. On sign-in, errors sit in a Check Soft block above the fields.
-- **Plate input:** the gate's plate field uses Plate Large type, uppercase, with a plain UI-type placeholder.
+### Gate sign buttons
+Record entry (primary) and Record exit (ghost) are 64px sign buttons, 1.15rem, with a 44px pictogram tile (white 14% on navy; Navy Mist on ghost) holding the entry or exit arrow.
 
-### Navigation
-A white tab strip under the header with a hairline bottom border. Tabs are Slate 600 text with a 3px transparent underline; hover goes to Ink; the current page is navy text with a navy underline. Scrolls horizontally on narrow screens.
+### Status
+A tint behind coloured ink with a 7px lit square, 2px corners, 0.82rem 600. Active is green, pending amber, rejected/suspended/expired red, inactive idle. Replaced (inactive) and rejected statuses are struck through with a 1px line: nothing disappears, it cancels.
 
 ### Cards / Containers
-- **Corner Style:** 8px.
-- **Background:** Surface White on Campus Paper.
+- **Corner Style:** 4px.
+- **Background:** Surface White, with a one-device-pixel Hairline border.
 - **Shadow Strategy:** none (see Elevation).
-- **Border:** 1px Hairline.
-- **Internal Padding:** 20px (16px on phones).
-- **Notices:** borderless 6px blocks in Navy Mist (info), Wait Soft (warn) or Check Soft (bad).
-- **Messages:** a 4px navy left rule with 14px indent.
+- **Internal Padding:** 24px (18px 24px for filter cards; 18px 16px under 640px).
+- **Use:** only for things you act on: filters, forms, the permit, Change vehicle, Rules, search results, messages.
 
-### Status Pill
-An inline pill (999px) with a 7px dot in the current colour, 1px 10px padding, Status type. Active is allow, pending is wait, rejected/suspended/expired/none are check, inactive is a neutral grey tint with Slate text.
+### Ledgers
+Records (Approvals, Gate log, Audit log, My entries and exits, Recent movements) are tables placed straight on the hall: an h2, a 1px Ink rule under the header row, hairline rows, no outer border, first and last cells flush. Table headers are Slate 600 at 0.8rem. New rows flash their verdict tint for 1.8s; handled approvals slide out right.
 
-### Number Plate (signature)
-Drawn to the national standard **AZS 599-2015, Type I** (Table 1, Figure 5, Figure 18), with every dimension in plate millimetres via one unit, `--u` = plate height / 110:
-- **Plate:** 520 x 110, corner R13, white reflective field, a 4.5 black border strip inset 3 from the edge (§2.2: symbols and border strip black on white). On screen a 1px #c3cad6 hairline marks the plate edge.
-- **Flag (§1.7):** the tricolour, 42 x 21, at 25 from the left and 17 from the top, with crescent and star.
-- **RFID label:** 58 x 44 at 16 from the left and 17 from the bottom, white with a thin black rounded outline and "AZ" in the plate face, directly below the flag.
-- **Characters:** Barlow Semi Condensed 500 (a DIN 1451-style face, loaded from Google Fonts so every device draws the same plate), cap height 65 of the 110 plate (smaller than the standard 77, by preference), 5 between letters. Each letter is trimmed to its cap height (`text-box: trim-both cap alphabetic`), so it is vertically centred on the plate, and the character group is centred in the field right of the flag band. The plate is always 520 wide. Plates stored without separators ("10AB123") are drawn in the standard 10-AB-123 groups.
-- **Separators:** raised bars 15 x 10, 8 clear either side (31 between groups), never the font's hyphen, whatever was typed.
-- **Sizes:** 30px tall inline, 58px for verdicts (50px on phones), 46px on the owner's permit tag; the gate input is itself a plate (78–104px).
-- It is announced as one image ("Plate 10-AB-123").
+Ledgers also carry On campus ("Inside now", oldest entry first, with Overnight and No permit status notes; "Visitors expected today") and the unregistered plates found by Find a vehicle under "Entering without a permit". Upcoming visitor passes on My vehicle are a hairline-ruled list inside the Visitor passes card: plate, day, guest, a status (Waiting for approval in Wait, Approved in Allow, Rejected in Check, struck through, with the reason below), and a small ghost Cancel button. Approvals holds two ledgers, "Visitor passes" (guards and admins) above "Permits" (admins only); Find a vehicle ends with the "All registered vehicles" ledger. On phones, empty cells of a stacked record are hidden.
 
-### Gate Verdict
-An 8px-radius panel with an 8px left rule in the verdict colour, soft tint fill, and the verdict word in Verdict type ("Allow" in allow green, "Check the driver" in check red), followed by the vehicle line with a plate.
+### Inputs / Fields
+- **Style:** Surface White, 1px Field Stroke border, 4px corners, 44px tall, padding 10px 12px 8px; label above in 0.85rem 600 Slate, hint below in 0.8rem.
+- **Hover:** border darkens to Slate.
+- **Focus:** 3px yellow outline flush to the field with an Ink border.
+- **Error:** Check Red border; message in Check Red 600 below the form.
 
-### Tables
-Full-width, collapsed borders, 0.95rem; 10px 8px cells with hairline rules; Slate 0.85rem headers; actions right-aligned. Below 640px they become labelled stacked records (see Layout).
+### Navigation
+Section legends on the navy band: pictogram plus 600 0.95rem label, Legend Mute at rest, white on hover and when current. The current legend carries a 4px yellow bar inset 14px from each side at the bottom edge. Switching sections slides the bar to its new legend with a 300ms view transition. The visitor's name and role sit at the right, with a ghost sign-out button.
 
-### MyADA Sign-in
-The sign-in mirrors the MyADA sign-in page so it reads as part of ADA at first glance; the header band is hidden on this screen.
-- **Ground:** Slate Ground `#a9bcc6` with a woven 45/-45 degree 1px texture.
-- **Panel:** `min(462px, 100%)`, Slate `#527a8e` (deepened from MyADA so white text passes AA at 4.6:1), a 1px 70% white border, square corners, a soft offset shadow. Centred, 10vh from the top (24px on phones).
-- **Crest:** the ADA logomark with "UNİVERSİTET" and "UNIVERSITY" set on an arc through the mark's star (serif, 17 units, 3 letter-spacing), then "SMART PARKING" in Barlow 500, 0.32em tracking, so it never passes for MyADA itself.
-- **Form:** fields 48px, Field `#dfe7f3`, centred text, placeholders as the visible labels (screen-reader labels behind them); SIGN IN as a 1px white outline that fills 14% white on hover; "Remember me on this computer" keeps the session in localStorage instead of the tab; "Forgot your password?" links to ADA's password page.
-- **Demo panel:** only when demo login is on, below the sign-in panel: 55% white with a white border, a bold "Prototype:" label, then demo rows with role plates. A picked row turns white with a Slate border while signing in.
-- **Motion:** the panels rise 12px and fade in once (0.5s, demo panel 80ms later); on sign-in they lift 10px and fade out (0.3s) before the app enters.
+### Page Sign
+A 48px navy tile (40px under 640px) holding the section pictogram at 34px, beside the Display heading, on a hairline. The tile appears only for sections in the nav.
 
-### Motion
-Feedback 100–150ms, state changes 200–320ms, authored moments up to 900ms; arrivals use `cubic-bezier(.16,1,.3,1)`, exits `cubic-bezier(.7,0,.84,0)` and run faster.
-- **Section change:** the paper nav tab slides to the new section at once (View Transition on the tab only); content rises 8px and fades over 0.32s, staggered 40ms per block and capped, with table rows capped at five steps.
-- **Sign-in:** the panels lift 10px and fade (0.3s), then the app enters.
-- **Gate:** the verdict fades in over 0.12s, the verdict word stamps (scale 1.18 to 1), and the typed plate flies from the input into the verdict (FLIP, 0.42s). The new movement row flashes its status tint for 1.8s. An empty submit shakes the plate input once.
-- **Approvals:** a handled row tints and slides out (0.22–0.32s) before the list refreshes.
-- **Controls:** buttons scale to 0.97 on press; busy buttons show a spinner after 150ms. A response slower than 180ms shows a thin bar along the top edge.
-- **Overlays:** dialogs rise 10px and scale from 0.97 over 0.24s; the toast rises 12px.
-- **Reduced motion:** movement becomes a short fade or nothing; the swings and the shake are off.
+### Permit
+The owner's permit as a sign: a navy head with the ADA mark, "Parking permit" and the academic term in Barlow (e.g. 2025/26), the large plate on the navy; beneath it a full-width state strip (tint with a 10px lit square, 700 at 1.05rem); then a white body with the car, the holder, the validity bar and a note above a hairline. Void permits fade their plate to 50%.
+
+### Validity Bar
+A 6px square-ended progress bar under "Time left / N days". Its length is the share of the permit term still left, in Allow Green on an Idle track. Shown for active permits only.
+
+### Number Plate
+A drawn AZS 599-2015 plate at 30px inline, 58px large (50px under 640px, 44px in the phone verdict). Fixed white, black and flag colours in both schemes.
+
+### Gate Scanner and Plate Input
+The gate input is itself a plate (78-104px tall) inside a viewfinder of four 22px corner brackets in Slate, turning navy on focus. Typed characters are centred like drawn ones: padding 0 14u 0 80u, type at 82 plate-millimetres rather than 92 (an input cannot squeeze wide glyphs, and the widest plates such as "99-WW-888" need 5.05em of the 426mm field), centred text, letter-spacing and text-indent .054em, padding-bottom .092em (Barlow caps sit 0.046em low on a line-height-1 box), uppercase, navy caret. Placeholder "00-AA-000" in Plate Placeholder. An empty submit nudges the plate side to side and reddens its strip.
+
+### Verdict
+A solid backlit sign: Allow Green for "Allow" with a proceed arrow, Check Red for "Check the driver" with a stop octagon; the pictogram sits in a 72px white tile (52px under 640px) in the verdict's colour. Everything after the tile sits in one text column (`.verdict-body`): the large plate, the owner (or "Visitor of <host>" for a day pass) or the instruction, a repeat-entry line for plates that came in without a permit three or more times (bold, inside a 1px 75%-white outline, never a filled block), and the recorded time in 94% white. Campus has one gate, so the verdict names the time, not the gate. The gate never auto-blocks, so the words stay "Allow" and "Check the driver".
 
 ### Toast and Dialog
-The toast is an Ink pill-ish block (8px) centred 20px from the bottom, fading in over 0.15s; errors turn it Check Red. Dialogs are 8px, 22px padded, at most 440px wide, actions right-aligned.
+The toast is a navy sign (red for errors) that rises 12px into place at the bottom centre. The dialog is a 460px white surface with 4px corners and right-aligned actions.
+
+### Sign-in
+A 440px white panel whose head is a navy sign carrying the ADA crest and "Smart Parking"; the form below has a Headline, fields, a full-width 48px primary button and a forgot link. The band is hidden on this screen. Demo accounts sit below a stroke rule as quiet transparent rows with navy role chips (staff roles as solid navy chips).
+
+### Motion
+Feedback stays at or under 150ms; state changes take 200-320ms on `cubic-bezier(.16, 1, .3, 1)` going in and `cubic-bezier(.7, 0, .84, 0)` going out. Pages rise 8px in sequence (sign, then work, capped at 80ms delay). The one authored moment is the gate: the scan line sweeps the frame once (500ms), the verdict sign lights up (450ms), its tile lands from 70% (320ms), and the typed plate flies from the input into the verdict (420ms). The slow-response bar is white over the band (navy on sign-in). Under reduced motion everything falls back to 200ms fades or holds still.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** use ADA Navy for the header band, primary actions and links, and keep the ADA logomark white on navy.
-- **Do** show every status as tint plus ink from the allow / check / wait triad, with the status dot on pills.
-- **Do** render plate numbers with the plate component, never as plain text in the Plate font.
-- **Do** keep Barlow Semi Condensed to stamped codes (plates, permit year, tag mark, role plates), tracked, at 600.
-- **Do** give every interactive element the 3px Focus Amber ring and touch rows at least 44px.
-- **Do** label demo affordances as prototype ("Prototype: sign in as a demo account") and keep them in their own panel, below the real sign-in.
-- **Do** give every movement a fade-only or static path under `prefers-reduced-motion`, keeping feedback legible.
+- **Do** keep Wayfinding Yellow to the current-section bar, the focus ring and selection.
+- **Do** put records in ledgers on the hall (1px Ink header rule, hairline rows) and keep white cards for things the user acts on.
+- **Do** open every section with the page sign: navy pictogram tile, light 300 heading, hairline beneath.
+- **Do** draw plates with the shared plate component and unit system; never type a plate as plain text.
+- **Do** show permanence: replaced and rejected statuses are struck through, void permits fade their plate, nothing is removed from view.
+- **Do** keep the gate's vocabulary "Allow" / "Check the driver"; the gate advises, it does not block.
+- **Do** give every movement a fade-only or static path under reduced motion.
+- **Do** keep hairlines to one device pixel and corners to 4px (2px for inner tiles).
 
 ### Don't:
-- **Don't** move the signed-in app off ADA navy; only the sign-in screen uses the MyADA slate.
-- **Don't** use the flag colours as UI colours, or draw the plate with an EU-style blue strip or with spaces or font hyphens between the groups.
-- **Don't** add shadows to cards, inputs or panels; shadows are for the hanging tag, toasts and dialogs.
-- **Don't** call a gate verdict "denied" or "blocked"; the vocabulary is "Allow" and "Check the driver", because the gate never auto-blocks.
-- **Don't** add decorative motion: scroll reveals, hover lifts, or loops (the slow-response bar loops only while a request is pending).
+- **Don't** use yellow for edges, loading bars, buttons, badges or emphasis.
+- **Don't** wrap record lists in white cards.
+- **Don't** add shadows to cards, permits or verdicts; only toast and dialog float.
+- **Don't** set page headings bold or use Barlow Semi Condensed outside plates and the permit term.
+- **Don't** add a second authored animation; the gate is the one moment.
+- **Don't** drift toward the grey SaaS card dashboard or the dark neon HUD.

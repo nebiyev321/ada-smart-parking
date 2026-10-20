@@ -1,59 +1,78 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-09T23:00:00Z",
+  "generatedAt": "2026-10-20T12:00:00Z",
   "title": "Design System: ADA Smart Parking",
   "extensions": {
     "colorMeta": {
-      "navy": { "role": "primary", "displayName": "ADA Navy", "canonical": "#0b3d91", "tonalRamp": ["#00052e", "#001669", "#06388c", "#2859b0", "#4a7ed7", "#6da3ff", "#aaccff", "#d5f0ff"] },
-      "navy-deep": { "role": "primary", "displayName": "Deep Navy", "canonical": "#082d6b", "tonalRamp": ["#000827", "#001d5a", "#183c7c", "#355c9e", "#5780c5", "#7aa5ed", "#b1ccf8", "#daf0ff"] },
-      "navy-soft": { "role": "primary", "displayName": "Navy Mist", "canonical": "#e8eefa", "tonalRamp": ["#090b10", "#20242d", "#3b4049", "#595e68", "#7b808b", "#9fa5b0", "#c7cbd1", "#eceef4"] },
-      "navy-soft-line": { "role": "primary", "displayName": "Mist Line", "canonical": "#c6d3ee" },
-      "plate-blue": { "role": "primary", "displayName": "Plate Blue", "canonical": "#003ea3", "tonalRamp": ["#000234", "#000a75", "#003498", "#1c56bd", "#407be5", "#63a2ff", "#a5cbff", "#d1f0ff"] },
-      "allow": { "role": "tertiary", "displayName": "Allow Green", "canonical": "#12723c", "tonalRamp": ["#001200", "#003200", "#00501c", "#0e703a", "#3e945c", "#65ba7f", "#a8d8b4", "#d4fadd"] },
-      "allow-soft": { "role": "tertiary", "displayName": "Allow Soft", "canonical": "#e3f4ea" },
-      "check": { "role": "tertiary", "displayName": "Check Red", "canonical": "#b42318", "tonalRamp": ["#2a0000", "#610000", "#870000", "#ad1a10", "#d74839", "#ff705d", "#ffb0a1", "#ffdace"] },
-      "check-soft": { "role": "tertiary", "displayName": "Check Soft", "canonical": "#fdecea" },
-      "wait": { "role": "tertiary", "displayName": "Wait Amber", "canonical": "#8a5100", "tonalRamp": ["#1c0300", "#451000", "#652f00", "#874e00", "#ad7130", "#d49656", "#e9c39e", "#ffe8cc"] },
-      "wait-soft": { "role": "tertiary", "displayName": "Wait Soft", "canonical": "#fff1da" },
-      "focus": { "role": "tertiary", "displayName": "Focus Amber", "canonical": "#f0b400", "tonalRamp": ["#1c0300", "#460f00", "#663000", "#885000", "#ad7400", "#d49900", "#e8c67f", "#ffebb5"] },
-      "paper": { "role": "neutral", "displayName": "Campus Paper", "canonical": "#f3f5f8", "tonalRamp": ["#0a0b0c", "#232426", "#3e4042", "#5c5e60", "#7e8083", "#a3a5a7", "#c9cacc", "#edeef0"] },
-      "surface": { "role": "neutral", "displayName": "Surface White", "canonical": "#ffffff" },
-      "stub-tint": { "role": "neutral", "displayName": "Stub Tint", "canonical": "#f7f9fc" },
-      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#17202e", "tonalRamp": ["#070b13", "#1b2433", "#364050", "#545e6f", "#768193", "#9aa5b8", "#c4cbd6", "#e9eff8"] },
-      "muted": { "role": "neutral", "displayName": "Slate", "canonical": "#556072", "tonalRamp": ["#070b13", "#1b2434", "#364051", "#535e70", "#758194", "#99a5b9", "#c3cbd7", "#e9eff9"] },
-      "line": { "role": "neutral", "displayName": "Hairline", "canonical": "#d9dee7" },
-      "field-stroke": { "role": "neutral", "displayName": "Field Stroke", "canonical": "#b9c1ce" },
-      "hanger-steel": { "role": "neutral", "displayName": "Hanger Steel", "canonical": "#8a96aa" }
+      "sign-navy": { "role": "primary", "displayName": "Sign Navy", "canonical": "#0b3d91", "cssVar": "--navy / --sign", "dark": "#0d2f70 (sign), #3b6fd8 (interactive)", "tonalRamp": ["#020f2b", "#051e4d", "#07265e", "#0b3d91", "#3b6fd8", "#7d9fe3", "#b9c8e6", "#e9effa"] },
+      "navy-deep": { "role": "primary", "displayName": "Deep Navy", "canonical": "#07265e", "cssVar": "--navy-deep", "dark": "#2c5bbd" },
+      "navy-soft": { "role": "primary", "displayName": "Navy Mist", "canonical": "#e9effa", "cssVar": "--navy-soft", "dark": "#16264a" },
+      "sign-muted": { "role": "primary", "displayName": "Legend Mute", "canonical": "#b9c8e6", "cssVar": "--sign-muted", "dark": "#9fb3dc" },
+      "wayfinding-yellow": { "role": "secondary", "displayName": "Wayfinding Yellow", "canonical": "#ffc72c", "cssVar": "--yellow / --focus", "tonalRamp": ["#3d2a00", "#664700", "#8f6400", "#c29000", "#ffc72c", "#ffd666", "#ffe599", "#fff4d6"] },
+      "allow": { "role": "tertiary", "displayName": "Allow Green", "canonical": "#0f7b45", "cssVar": "--allow / --allow-sign", "dark": "#5fd396 (text); sign stays #0f7b45", "tonalRamp": ["#032614", "#064a28", "#0f7b45", "#2e9a62", "#5fd396", "#9be3bb", "#c9f0da", "#e2f3e9"] },
+      "allow-soft": { "role": "tertiary", "displayName": "Allow Tint", "canonical": "#e2f3e9", "dark": "rgba(56, 180, 115, .15)" },
+      "check": { "role": "tertiary", "displayName": "Check Red", "canonical": "#b8232b", "cssVar": "--check / --check-sign", "dark": "#ff8a8f (text); sign stays #b8232b", "tonalRamp": ["#33070a", "#5e0e13", "#8c171e", "#b8232b", "#e04a52", "#ff8a8f", "#fcc4c7", "#fbe9ea"] },
+      "check-soft": { "role": "tertiary", "displayName": "Check Tint", "canonical": "#fbe9ea", "dark": "rgba(230, 70, 80, .15)" },
+      "wait": { "role": "tertiary", "displayName": "Wait Amber", "canonical": "#8a5300", "dark": "#ffc56b", "tonalRamp": ["#2b1a00", "#573400", "#8a5300", "#b87400", "#e09a2a", "#ffc56b", "#ffe0a8", "#fff2d6"] },
+      "wait-soft": { "role": "tertiary", "displayName": "Wait Tint", "canonical": "#fff2d6", "dark": "rgba(255, 180, 60, .14)" },
+      "idle-soft": { "role": "tertiary", "displayName": "Idle Tint", "canonical": "#edf0f4", "dark": "#1a2640" },
+      "hall": { "role": "neutral", "displayName": "Hall", "canonical": "#f4f6fa", "dark": "#08111f", "tonalRamp": ["#08111f", "#132038", "#2a3650", "#56627a", "#8a95aa", "#b4bdcc", "#dfe4ec", "#f4f6fa"] },
+      "surface": { "role": "neutral", "displayName": "Surface White", "canonical": "#ffffff", "dark": "#0f1a2e" },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#0e1a2e", "dark": "#e6ecf6" },
+      "muted": { "role": "neutral", "displayName": "Slate", "canonical": "#56627a", "dark": "#98a6c0" },
+      "line": { "role": "neutral", "displayName": "Hairline", "canonical": "#dfe4ec", "dark": "#213050" },
+      "stroke": { "role": "neutral", "displayName": "Field Stroke", "canonical": "#b4bdcc", "dark": "#3a4a6a" },
+      "plate-white": { "role": "neutral", "displayName": "Plate White", "canonical": "#ffffff", "note": "Fixed in both schemes." },
+      "plate-black": { "role": "neutral", "displayName": "Plate Black", "canonical": "#111111", "note": "Fixed in both schemes." },
+      "plate-placeholder": { "role": "neutral", "displayName": "Plate Placeholder", "canonical": "#6b7385" },
+      "plate-rim": { "role": "neutral", "displayName": "Plate Rim", "canonical": "#c3cad6" },
+      "dark-hall": { "role": "neutral", "displayName": "Night Hall", "canonical": "#08111f" },
+      "dark-surface": { "role": "neutral", "displayName": "Night Surface", "canonical": "#0f1a2e" },
+      "dark-sign": { "role": "primary", "displayName": "Night Sign", "canonical": "#0d2f70" },
+      "dark-navy": { "role": "primary", "displayName": "Night Navy", "canonical": "#3b6fd8" },
+      "dark-navy-ink": { "role": "primary", "displayName": "Night Link", "canonical": "#9dbaf5" },
+      "dark-ink": { "role": "neutral", "displayName": "Night Ink", "canonical": "#e6ecf6" },
+      "dark-muted": { "role": "neutral", "displayName": "Night Slate", "canonical": "#98a6c0" },
+      "dark-line": { "role": "neutral", "displayName": "Night Hairline", "canonical": "#213050" }
     },
     "typographyMeta": {
-      "display": { "displayName": "Permit Year", "purpose": "The academic-year code on the hang-tag head; tabular numerals." },
-      "plate": { "displayName": "Plate", "purpose": "Number-plate numerals inline in tables and cards." },
-      "plate-lg": { "displayName": "Plate Large", "purpose": "Gate-check plate and plate input; 1.6rem under 640px." },
-      "tag-mark": { "displayName": "Tag Mark", "purpose": "SMART PARKING on the hang-tag head." },
-      "role-label": { "displayName": "Role Plate", "purpose": "Uppercase role plates in the demo stub." },
-      "verdict": { "displayName": "Verdict", "purpose": "Allow / Check the driver at the gate." },
+      "display": { "displayName": "Page Sign", "purpose": "The light page heading beside its pictogram tile." },
+      "verdict": { "displayName": "Verdict", "purpose": "Allow / Check the driver on the gate's lit sign; 2.1rem under 640px." },
       "headline": { "displayName": "Headline", "purpose": "Sign-in heading." },
-      "title": { "displayName": "Title", "purpose": "Card headings (h2)." },
-      "subtitle": { "displayName": "Subtitle", "purpose": "h3." },
-      "body": { "displayName": "Body", "purpose": "All running text, 16px/1.5." },
-      "label": { "displayName": "Label", "purpose": "Field labels." },
-      "status": { "displayName": "Status", "purpose": "Status pills and table headers." }
+      "title": { "displayName": "Title", "purpose": "Card and ledger headings (h2)." },
+      "body": { "displayName": "Body", "purpose": "All running text, tabular numerals." },
+      "label": { "displayName": "Label", "purpose": "Field labels, Slate; status legends at 0.82rem." },
+      "table-head": { "displayName": "Table Head", "purpose": "Ledger column headers, Slate." },
+      "plate": { "displayName": "Plate", "purpose": "Number-plate characters, sized in plate millimetres and trimmed to cap height." },
+      "permit-term": { "displayName": "Permit Term", "purpose": "Academic term on the permit sign, e.g. 2025/26." }
     },
     "shadows": [
-      { "name": "hanging-tag", "value": "drop-shadow(0 10px 22px rgba(11,61,145,.16)) drop-shadow(0 2px 4px rgba(23,32,46,.1))", "purpose": "filter on the hang-tag so the shadow follows the masked silhouette." },
-      { "name": "toast", "value": "0 6px 24px rgba(23,32,46,.25)", "purpose": "Transient toast." },
-      { "name": "dialog", "value": "0 20px 60px rgba(23,32,46,.35)", "purpose": "Modal dialog, over a rgba(23,32,46,.5) backdrop." }
+      { "name": "toast", "value": "0 8px 28px rgba(8, 20, 45, .28)", "purpose": "Transient toast; one of only two floating things." },
+      { "name": "dialog", "value": "0 24px 64px rgba(8, 20, 45, .32)", "purpose": "Modal dialog, over rgba(8, 20, 45, .55) with a 2px backdrop blur." },
+      { "name": "scan-glow", "value": "0 0 14px 2px color-mix(in srgb, var(--navy-ink) 45%, transparent)", "purpose": "Glow on the scanner sweep line during its single pass." },
+      { "name": "plate-rim", "value": "0 0 0 1px #c3cad6", "purpose": "Outline that lets a white plate read on a white surface." },
+      { "name": "focus-ring", "value": "outline: 3px solid #ffc72c; outline-offset: 2px; box-shadow: 0 0 0 2px var(--ink)", "purpose": "Focus everywhere; fields use outline-offset 0 with an Ink border instead of the ink halo." }
     ],
     "motion": [
-      { "name": "tag-swing", "value": "0.9s cubic-bezier(.3,.6,.4,1); rotate -4.5deg, 2.6, -1.2, 0.45, 0 about the hanger hole", "purpose": "Once per session when the sign-in tag first renders." },
-      { "name": "stub-tear", "value": "0.22s cubic-bezier(.16,1,.3,1); translateY(7px) rotate(.8deg) from the top-left", "purpose": "When a demo row is picked; reverts on failed sign-in." },
-      { "name": "toast-fade", "value": "opacity 0.15s", "purpose": "Toast show/hide." },
-      { "name": "reduced-motion", "value": "prefers-reduced-motion: reduce disables the swing, the tear and all transitions", "purpose": "Accessibility invariant." }
+      { "name": "ease-out", "value": "cubic-bezier(.16, 1, .3, 1)", "purpose": "Entrances and state changes." },
+      { "name": "ease-in", "value": "cubic-bezier(.7, 0, .84, 0)", "purpose": "Exits: toast hide, sign-in unhook, rows leaving." },
+      { "name": "feedback", "value": "150ms", "purpose": "Hover, border, colour and press feedback; buttons scale .97 on press." },
+      { "name": "section-enter", "value": "rise 320ms ease-out, 8px; children delayed 0 / 40 / 80ms; rows fade 300ms at 120ms", "purpose": "Page sign, then the work." },
+      { "name": "nav-bar", "value": "view-transition nav-tab 300ms ease-out", "purpose": "The yellow you-are-here bar slides to the new section." },
+      { "name": "gate-sweep", "value": "sweep 500ms ease-out, once", "purpose": "Scan line passes down the plate frame after a gate record." },
+      { "name": "verdict-light", "value": "light-up 450ms ease-out (brightness 1.6 to none) + tile-in 320ms at 60ms from scale .7", "purpose": "The verdict sign lights and its pictogram tile lands." },
+      { "name": "plate-fly", "value": "420ms cubic-bezier(.16, 1, .3, 1), from input rect to verdict plate", "purpose": "The typed plate travels into the verdict (JS, Web Animations)." },
+      { "name": "row-flash", "value": "1.8s ease-out from allow-soft / check-soft", "purpose": "The newest gate row flashes its verdict tint." },
+      { "name": "row-leave", "value": "slide-out 220ms ease-in, 16px right (approved: 320ms with allow tint)", "purpose": "Handled approvals leave before the list refreshes." },
+      { "name": "loading-bar", "value": "3px bar, progress 1.1s infinite; white over the band, navy on sign-in", "purpose": "Slow-response indicator." },
+      { "name": "reduced-motion", "value": "prefers-reduced-motion: reduce", "purpose": "Entrances, verdict and dialog become 200ms fades; sweep, nudge, press scale and plate flight are removed; nav bar jumps." }
     ],
     "breakpoints": [
+      { "name": "nav-wrap", "value": "980px" },
+      { "name": "single-column", "value": "760px" },
       { "name": "table-stack", "value": "640px" },
-      { "name": "tag-compact", "value": "480px" },
-      { "name": "demo-row-stack", "value": "400px" },
+      { "name": "compact", "value": "420px" },
+      { "name": "hairline-half", "value": "(min-resolution: 2dppx)" },
       { "name": "fine-pointer", "value": "(pointer: fine)" }
     ]
   },
@@ -62,115 +81,119 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Navy fill for the main action on any screen.",
-      "html": "<button class=\"ds-btn\">Sign in</button>",
-      "css": ".ds-btn { padding: 9px 16px; border-radius: 6px; border: 1px solid #0b3d91; background: #0b3d91; color: #fff; font: 600 1rem 'Source Sans 3', system-ui, sans-serif; cursor: pointer; min-height: 40px; } .ds-btn:hover { background: #082d6b; } .ds-btn:focus-visible { outline: 3px solid #f0b400; outline-offset: 2px; }"
+      "description": "The one navy action on a surface.",
+      "html": "<button class=\"ds-btn\">Register vehicle</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 18px 8px; border-radius: 4px; border: 1px solid #0b3d91; background: #0b3d91; color: #fff; font: 600 .95rem/1.2 Overpass, system-ui, sans-serif; cursor: pointer; transition: background-color .15s, border-color .15s, transform .1s; } .ds-btn:hover { background: #07265e; border-color: #07265e; } .ds-btn:active { transform: scale(.97); } .ds-btn:focus-visible { outline: 3px solid #ffc72c; outline-offset: 2px; box-shadow: 0 0 0 2px #0e1a2e; }"
     },
     {
       "name": "Ghost Button",
       "kind": "button",
       "refersTo": "button-ghost",
-      "description": "Secondary actions beside a primary.",
+      "description": "Secondary actions and Record exit.",
       "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
-      "css": ".ds-btn-ghost { padding: 9px 16px; border-radius: 6px; border: 1px solid #0b3d91; background: #fff; color: #0b3d91; font: 600 1rem 'Source Sans 3', system-ui, sans-serif; cursor: pointer; min-height: 40px; } .ds-btn-ghost:hover { background: #e8eefa; } .ds-btn-ghost:focus-visible { outline: 3px solid #f0b400; outline-offset: 2px; }"
-    },
-    {
-      "name": "Danger Button",
-      "kind": "button",
-      "refersTo": "button-danger",
-      "description": "Reject, suspend, remove.",
-      "html": "<button class=\"ds-btn-danger\">Suspend</button>",
-      "css": ".ds-btn-danger { padding: 9px 16px; border-radius: 6px; border: 1px solid #b42318; background: #fff; color: #b42318; font: 600 1rem 'Source Sans 3', system-ui, sans-serif; cursor: pointer; min-height: 40px; } .ds-btn-danger:hover { background: #fdecea; } .ds-btn-danger:focus-visible { outline: 3px solid #f0b400; outline-offset: 2px; }"
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 18px 8px; border-radius: 4px; border: 1px solid #b4bdcc; background: transparent; color: #0b3d91; font: 600 .95rem/1.2 Overpass, system-ui, sans-serif; cursor: pointer; transition: background-color .15s, border-color .15s, transform .1s; } .ds-btn-ghost:hover { background: #e9effa; border-color: #0b3d91; } .ds-btn-ghost:active { transform: scale(.97); } .ds-btn-ghost:focus-visible { outline: 3px solid #ffc72c; outline-offset: 2px; box-shadow: 0 0 0 2px #0e1a2e; }"
     },
     {
       "name": "Text Field",
       "kind": "input",
-      "refersTo": "input-field",
-      "description": "Labelled input with label above.",
-      "html": "<label class=\"ds-field\"><span>Username</span><input type=\"text\"></label>",
-      "css": ".ds-field { display: block; font: 16px/1.5 'Source Sans 3', system-ui, sans-serif; color: #17202e; } .ds-field > span { display: block; font-size: .875rem; font-weight: 600; color: #556072; margin-bottom: 4px; } .ds-field input { width: 100%; box-sizing: border-box; padding: 9px 11px; border: 1px solid #b9c1ce; border-radius: 6px; font: inherit; background: #fff; } .ds-field input:focus-visible { outline: 3px solid #f0b400; outline-offset: 0; border-color: #17202e; }"
+      "refersTo": "input",
+      "description": "Label above, 44px field, yellow focus with an ink border.",
+      "html": "<label class=\"ds-field\"><span>Make</span><input placeholder=\"Toyota\"></label>",
+      "css": ".ds-field { display: block; font: 400 16px/1.55 Overpass, system-ui, sans-serif; color: #0e1a2e; } .ds-field span { display: block; font-size: .85rem; font-weight: 600; color: #56627a; margin-bottom: 6px; } .ds-field input { width: 100%; box-sizing: border-box; min-height: 44px; padding: 10px 12px 8px; border: 1px solid #b4bdcc; border-radius: 4px; font: inherit; background: #fff; color: inherit; transition: border-color .15s; } .ds-field input::placeholder { color: #56627a; } .ds-field input:hover { border-color: #56627a; } .ds-field input:focus-visible { outline: 3px solid #ffc72c; outline-offset: 0; border-color: #0e1a2e; }"
     },
     {
-      "name": "Header Band and Nav",
+      "name": "Sign Band Navigation",
       "kind": "nav",
-      "refersTo": "header-band",
-      "description": "ADA navy band with brand, then the white tab strip.",
-      "html": "<div class=\"ds-top\"><span><b>MyADA</b> Smart Parking</span></div><nav class=\"ds-nav\"><a href=\"#\" aria-current=\"page\">Gate</a><a href=\"#\">Vehicles</a><a href=\"#\">Messages</a></nav>",
-      "css": ".ds-top { background: #0b3d91; color: #fff; padding: 12px 20px; font: 1.05rem 'Source Sans 3', system-ui, sans-serif; } .ds-nav { background: #fff; border-bottom: 1px solid #d9dee7; padding: 0 12px; display: flex; font-family: 'Source Sans 3', system-ui, sans-serif; } .ds-nav a { padding: 13px 14px 10px; color: #556072; text-decoration: none; border-bottom: 3px solid transparent; font-weight: 600; } .ds-nav a:hover { color: #17202e; } .ds-nav a[aria-current=page] { color: #0b3d91; border-color: #0b3d91; } .ds-nav a:focus-visible { outline: 3px solid #f0b400; outline-offset: 2px; }"
+      "refersTo": "sign-band",
+      "description": "Navy band with white legends; the current section carries the 4px yellow bar.",
+      "html": "<nav class=\"ds-band\"><span class=\"ds-brand\">Smart Parking</span><a href=\"#\" aria-current=\"page\"><svg class=\"ds-ico\" viewBox=\"0 0 24 24\"><path d=\"M5 21V5M2.5 21h5M5 7.5h16v5H5zM11 7.5l-2.5 5M17 7.5l-2.5 5\"/></svg>Gate check</a><a href=\"#\"><svg class=\"ds-ico\" viewBox=\"0 0 24 24\"><circle cx=\"10.5\" cy=\"10.5\" r=\"6\"/><path d=\"M15 15l5.5 5.5\"/></svg>Find a vehicle</a></nav>",
+      "css": ".ds-band { display: flex; align-items: stretch; gap: 2px; min-height: 60px; padding: 0 24px; background: #0b3d91; color: #fff; font: 600 .95rem/1.2 Overpass, system-ui, sans-serif; } .ds-brand { display: flex; align-items: center; margin-right: 26px; font-size: 1rem; } .ds-band a { position: relative; display: flex; align-items: center; gap: 8px; padding: 0 14px; color: #b9c8e6; text-decoration: none; transition: color .15s; } .ds-band a:hover, .ds-band a[aria-current] { color: #fff; } .ds-band a::after { content: \"\"; position: absolute; left: 14px; right: 14px; bottom: 0; height: 4px; } .ds-band a[aria-current]::after { background: #ffc72c; } .ds-band a:focus-visible { outline: 3px solid #ffc72c; outline-offset: -4px; } .ds-ico { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }"
     },
     {
-      "name": "Status Pills",
+      "name": "Status",
       "kind": "chip",
-      "refersTo": "status-active",
-      "description": "Tint-and-ink permit status with a dot.",
-      "html": "<span class=\"ds-status ds-ok\">Active</span> <span class=\"ds-status ds-wait\">Waiting for approval</span> <span class=\"ds-status ds-bad\">Suspended</span>",
-      "css": ".ds-status { display: inline-flex; align-items: center; gap: 6px; padding: 1px 10px; border-radius: 999px; font: 600 .85rem 'Source Sans 3', system-ui, sans-serif; white-space: nowrap; } .ds-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; } .ds-ok { background: #e3f4ea; color: #12723c; } .ds-wait { background: #fff1da; color: #8a5100; } .ds-bad { background: #fdecea; color: #b42318; }"
+      "refersTo": "status",
+      "description": "Tint behind coloured ink with a lit square; replaced and rejected are struck through.",
+      "html": "<span class=\"ds-status ds-ok\">Active</span> <span class=\"ds-status ds-wait\">Pending</span> <span class=\"ds-status ds-void\">Rejected</span>",
+      "css": ".ds-status { display: inline-flex; align-items: center; gap: 7px; padding: 3px 9px 1px; border-radius: 2px; font: 600 .82rem/1.55 Overpass, system-ui, sans-serif; white-space: nowrap; } .ds-status::before { content: \"\"; width: 7px; height: 7px; margin-bottom: 2px; background: currentColor; } .ds-ok { background: #e2f3e9; color: #0f7b45; } .ds-wait { background: #fff2d6; color: #8a5300; } .ds-void { background: #fbe9ea; color: #b8232b; text-decoration: line-through; text-decoration-thickness: 1px; }"
     },
     {
-      "name": "Azerbaijani Number Plate",
+      "name": "Action Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "White, square-shouldered, one hairline; only for things you act on.",
+      "html": "<section class=\"ds-card\"><h2>Change vehicle</h2><p>Send a new plate for approval. Your current permit stays valid until it is approved.</p></section>",
+      "css": ".ds-card { background: #fff; border: 1px solid #dfe4ec; border-radius: 4px; padding: 24px; font: 400 16px/1.55 Overpass, system-ui, sans-serif; color: #0e1a2e; } .ds-card h2 { margin: 0 0 16px; font-size: 1.125rem; font-weight: 600; line-height: 1.2; } .ds-card p { margin: 0; }"
+    },
+    {
+      "name": "Ledger",
       "kind": "custom",
-      "refersTo": "plate",
-      "description": "Signature: plate with AZ region strip and flag.",
-      "html": "<span class=\"ds-plate\" role=\"img\" aria-label=\"Plate 10-AB-123\"><span class=\"ds-plate-az\"><i></i>AZ</span><span class=\"ds-plate-num\">10-AB-123</span></span>",
-      "css": ".ds-plate { display: inline-flex; align-items: stretch; border: 2px solid #17202e; border-radius: 5px; background: #fff; overflow: hidden; line-height: 1; color: #17202e; } .ds-plate-az { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: #003ea3; color: #fff; padding: 4px 7px; font: 700 .75rem 'Source Sans 3', system-ui, sans-serif; } .ds-plate-az i { display: block; width: 18px; height: 12px; background: linear-gradient(#00b5e2 0 33.3%, #ef3340 0 66.6%, #509e2f 0); } .ds-plate-num { font: 600 2rem 'Barlow Semi Condensed', 'Arial Narrow', sans-serif; letter-spacing: .06em; padding: 6px 14px 4px; white-space: nowrap; }"
+      "refersTo": "ledger",
+      "description": "Records straight on the hall: ink rule under the header, hairline rows.",
+      "html": "<section class=\"ds-ledger\"><h2>Recent movements</h2><table><thead><tr><th>Time</th><th>Plate</th><th>Gate</th></tr></thead><tbody><tr><td>08:12</td><td>10-AB-123</td><td>Main gate</td></tr><tr><td>08:09</td><td>90-JK-401</td><td>North gate</td></tr></tbody></table></section>",
+      "css": ".ds-ledger { background: #f4f6fa; padding: 16px; font: 400 16px/1.55 Overpass, system-ui, sans-serif; color: #0e1a2e; font-variant-numeric: tabular-nums; } .ds-ledger h2 { margin: 0 0 14px; font-size: 1.125rem; font-weight: 600; } .ds-ledger table { width: 100%; border-collapse: collapse; font-size: .94rem; } .ds-ledger th, .ds-ledger td { text-align: left; padding: 12px 10px 10px; border-bottom: 1px solid #dfe4ec; } .ds-ledger th { color: #56627a; font-weight: 600; font-size: .8rem; padding-top: 0; border-bottom-color: #0e1a2e; } .ds-ledger th:first-child, .ds-ledger td:first-child { padding-left: 0; } .ds-ledger tbody tr:last-child td { border-bottom: 0; }"
+    },
+    {
+      "name": "Page Sign",
+      "kind": "custom",
+      "refersTo": "sign-tile",
+      "description": "Navy pictogram tile beside a light, wide heading, standing on a hairline.",
+      "html": "<header class=\"ds-page-head\"><span class=\"ds-tile\"><svg viewBox=\"0 0 24 24\"><path d=\"M4 17v-5l2.2-5.2A1.5 1.5 0 0 1 7.6 6h8.8a1.5 1.5 0 0 1 1.4.8L20 12v5M4 12h16M3.5 17h17M6 17v2.5M18 17v2.5\"/></svg></span><h1>My vehicle</h1></header>",
+      "css": ".ds-page-head { display: flex; align-items: center; gap: 18px; padding-bottom: 20px; border-bottom: 1px solid #dfe4ec; color: #0e1a2e; } .ds-page-head h1 { margin: 0; font: 300 2.75rem/1.05 Overpass, system-ui, sans-serif; letter-spacing: -.025em; } .ds-tile { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 4px; background: #0b3d91; color: #fff; flex: none; } .ds-tile svg { width: 34px; height: 34px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }"
     },
     {
       "name": "Gate Verdict",
-      "kind": "card",
-      "refersTo": "verdict-allow",
-      "description": "Allow / Check the driver panel at the gate.",
-      "html": "<div class=\"ds-verdict\"><div class=\"ds-verdict-word\">Allow</div><div>Active permit, Toyota Corolla</div></div>",
-      "css": ".ds-verdict { border-radius: 8px; padding: 18px 20px; border-left: 8px solid #12723c; background: #e3f4ea; font: 16px/1.5 'Source Sans 3', system-ui, sans-serif; color: #17202e; } .ds-verdict-word { font-size: 2rem; font-weight: 700; line-height: 1.1; margin-bottom: 8px; color: #12723c; }"
-    },
-    {
-      "name": "Card",
-      "kind": "card",
-      "refersTo": "card",
-      "description": "Flat white working surface on paper.",
-      "html": "<div class=\"ds-card\"><h2>My vehicle</h2><p>Permit valid until 30 June.</p></div>",
-      "css": ".ds-card { background: #fff; border: 1px solid #d9dee7; border-radius: 8px; padding: 20px; font: 16px/1.5 'Source Sans 3', system-ui, sans-serif; color: #17202e; } .ds-card h2 { font-size: 1.25rem; font-weight: 700; line-height: 1.2; margin: 0 0 .6em; } .ds-card p { margin: 0; color: #556072; }"
-    },
-    {
-      "name": "Permit Hang-tag",
       "kind": "custom",
-      "refersTo": "hang-tag-head",
-      "description": "Signature sign-in card: navy head with punched hole, white body, perforated demo stub.",
-      "html": "<div class=\"ds-tag\"><div class=\"ds-tag-main\"><div class=\"ds-tag-head\"><span class=\"ds-tag-name\">SMART PARKING</span><span class=\"ds-tag-year\">2026/27</span><span class=\"ds-tag-serial\">Campus parking permit</span></div><div class=\"ds-tag-body\"><b>Sign in</b></div></div><div class=\"ds-tag-stub\"><button class=\"ds-demo\"><span>Leyla Mammadova</span><span class=\"ds-role\">Student</span></button><button class=\"ds-demo\"><span>Rashad Karimov</span><span class=\"ds-role ds-staff\">Guard</span></button></div></div>",
-      "css": ".ds-tag { --hole: 24px; width: 320px; font: 16px/1.5 'Source Sans 3', system-ui, sans-serif; color: #17202e; filter: drop-shadow(0 10px 22px rgba(11,61,145,.16)) drop-shadow(0 2px 4px rgba(23,32,46,.1)); } .ds-tag-main { background: #fff; border-radius: 22px 22px 0 0; overflow: hidden; -webkit-mask: radial-gradient(circle 9px at 50% var(--hole), transparent 8.5px, #000 9px), radial-gradient(circle 10px at 0 100%, transparent 9.5px, #000 10px), radial-gradient(circle 10px at 100% 100%, transparent 9.5px, #000 10px); -webkit-mask-composite: source-in; mask: radial-gradient(circle 9px at 50% var(--hole), transparent 8.5px, #000 9px), radial-gradient(circle 10px at 0 100%, transparent 9.5px, #000 10px), radial-gradient(circle 10px at 100% 100%, transparent 9.5px, #000 10px); mask-composite: intersect; } .ds-tag-head { background: #0b3d91; color: #fff; text-align: center; padding: 40px 24px 16px; } .ds-tag-name, .ds-tag-year, .ds-tag-serial { display: block; } .ds-tag-name { font: 600 1.3rem 'Barlow Semi Condensed', sans-serif; letter-spacing: .24em; } .ds-tag-year { font: 600 3rem/1 'Barlow Semi Condensed', sans-serif; letter-spacing: .04em; margin-top: 12px; font-variant-numeric: tabular-nums; } .ds-tag-serial { margin-top: 6px; font-size: .9rem; color: #d3ddf1; } .ds-tag-body { padding: 20px 32px 22px; font-size: 1.5rem; } .ds-tag-stub { position: relative; background: #f7f9fc; border-radius: 0 0 14px 14px; padding: 16px 20px 18px; display: grid; gap: 2px; -webkit-mask: radial-gradient(circle 10px at 0 0, transparent 9.5px, #000 10px), radial-gradient(circle 10px at 100% 0, transparent 9.5px, #000 10px); -webkit-mask-composite: source-in; mask: radial-gradient(circle 10px at 0 0, transparent 9.5px, #000 10px), radial-gradient(circle 10px at 100% 0, transparent 9.5px, #000 10px); mask-composite: intersect; } .ds-tag-stub::before { content: ''; position: absolute; left: 14px; right: 14px; top: 0; border-top: 2px dashed #c3cad6; } .ds-demo { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 6px 10px; background: transparent; border: 1px solid transparent; border-radius: 6px; font: 600 1rem 'Source Sans 3', sans-serif; color: #17202e; cursor: pointer; text-align: left; } .ds-demo:hover { background: #fff; border-color: #d9dee7; } .ds-demo:focus-visible { outline: 3px solid #f0b400; outline-offset: 2px; } .ds-role { font: 600 .74rem 'Barlow Semi Condensed', sans-serif; letter-spacing: .1em; text-transform: uppercase; color: #0b3d91; background: #e8eefa; border: 1px solid #c6d3ee; border-radius: 3px; padding: 1px 7px; } .ds-role.ds-staff { color: #17202e; background: #fff; border-color: #8a96aa; }"
+      "refersTo": "verdict-allow",
+      "description": "A solid backlit sign with a white pictogram tile; green Allow or red Check the driver.",
+      "html": "<div class=\"ds-verdict\"><span class=\"ds-vtile\"><svg viewBox=\"0 0 24 24\"><path d=\"M12 20V5M6 11l6-6 6 6\"/></svg></span><p class=\"ds-vword\">Allow</p><p>Leyla Mammadova, staff. White Toyota Corolla.</p></div><div class=\"ds-verdict ds-check\"><span class=\"ds-vtile\"><svg viewBox=\"0 0 24 24\"><path d=\"M8.5 3h7L21 8.5v7L15.5 21h-7L3 15.5v-7zM12 7.5v5.5M12 16.5v.01\"/></svg></span><p class=\"ds-vword\">Check the driver</p><p>No active permit for this plate.</p></div>",
+      "css": ".ds-verdict { display: grid; grid-template-columns: auto 1fr; gap: 6px 22px; align-items: start; padding: 24px; margin-bottom: 12px; border-radius: 4px; background: #0f7b45; color: #fff; font: 400 16px/1.55 Overpass, system-ui, sans-serif; animation: ds-light .45s ease-out both; } .ds-verdict.ds-check { background: #b8232b; } .ds-verdict p { margin: 0; } .ds-vtile { grid-row: span 2; display: grid; place-items: center; width: 72px; height: 72px; border-radius: 2px; background: #fff; color: #0f7b45; } .ds-check .ds-vtile { color: #b8232b; } .ds-vtile svg { width: 44px; height: 44px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; } .ds-vword { font: 700 3rem/1 Overpass, system-ui, sans-serif; letter-spacing: -.02em; padding-top: 4px; } @keyframes ds-light { 0% { opacity: 0; filter: brightness(1.6) saturate(.6); } 40% { opacity: 1; } 100% { filter: none; } } @media (prefers-reduced-motion: reduce) { .ds-verdict { animation: none; } }"
+    },
+    {
+      "name": "Validity Bar",
+      "kind": "custom",
+      "refersTo": "validity",
+      "description": "Length is time left on the permit term.",
+      "html": "<div class=\"ds-validity\"><div class=\"ds-vlabel\"><span>Time left</span><strong>212 days</strong></div><div class=\"ds-track\"><div class=\"ds-fill\" style=\"width:58%\"></div></div></div>",
+      "css": ".ds-validity { max-width: 320px; font: 400 16px/1.55 Overpass, system-ui, sans-serif; } .ds-vlabel { display: flex; justify-content: space-between; font-size: .85rem; color: #56627a; margin-bottom: 6px; } .ds-vlabel strong { color: #0e1a2e; font-weight: 600; } .ds-track { height: 6px; background: #edf0f4; } .ds-fill { height: 100%; background: #0f7b45; }"
     }
   ],
   "narrative": {
-    "northStar": "The Campus Permit",
-    "overview": "ADA Smart Parking looks like the paperwork of parking made trustworthy: a navy ADA band across the top, white working cards on a cool paper ground, and the two physical objects a driver already knows, the Azerbaijani number plate and the permit hang-tag, rendered as interface. The world is an institutional campus service, not a SaaS product. It earns trust by looking like part of ADA (the logomark and ADA navy are binding) and by staying plain everywhere the physical objects don't appear.\n\nDensity is moderate and practical. Owners and admins read tables and cards on desktop and phone; guards act at the gate on a phone, so the gate-check surface goes large (2rem plate input, 56px gate buttons, 2rem verdict word). Colour carries meaning: navy is ADA and action, and three status hues (allow green, check red, wait amber) carry every state, always as a soft tint plus a strong ink, never as decoration.\n\nThe signature is object fidelity. Plates use a condensed, tracked plate face with the blue AZ region strip and flag; the sign-in card is a hang-tag with a punched hanger hole, side notches at the perforation, a dashed tear line and a tear-off stub. Motion belongs to these objects only: the tag swings once from its hole, and the stub tears a few pixels when a demo account is picked. Everything else is still.",
+    "northStar": "Terminal Wayfinding",
+    "overview": "The campus gate is a terminal. Every screen says where you are and where to go in the calm, bright language of airport signage: navy sign panels carry white legends, a single wayfinding yellow marks \"you are here\", and work happens on a bright, quiet hall floor. The system answers a request for something \"more futuristic and also minimalistic\" with signage rather than effects: light, wide headings, one-device-pixel rules, square pictogram tiles, and one authored moment at the gate where a scan line sweeps the plate and the verdict lights up like a backlit sign.\n\nDensity is moderate and administrative. Pages are a single 1080px column; records read as ledgers straight off the hall floor, and white surfaces appear only where you act. Light is the default; dark mode follows the operating system automatically and keeps the same sign logic with a deeper navy.\n\nThe ADA logomark and ADA blue are binding brand commitments; the navy sign is that blue. The world refuses the grey SaaS card dashboard and the dark neon HUD.",
     "keyCharacteristics": [
-      "ADA navy band header; paper ground; flat white cards with hairline borders.",
-      "Two families: Source Sans 3 for all UI, Barlow Semi Condensed (600, tracked) only for plate-like codes.",
-      "Status is a fixed triad (allow / check / wait), each a soft tint with a strong ink.",
-      "Physical objects (number plate, hang-tag) are the only expressive components.",
-      "Amber focus ring (3px) everywhere; motion only on the hang-tag and the toast fade, and none under reduced motion."
+      "A navy sign band with white section legends; the current one carries a 4px yellow bar.",
+      "Light (300) Overpass page headings beside a navy pictogram tile, standing on a hairline.",
+      "Hairlines are one device pixel; corners are 4px, tiles 2px.",
+      "White cards for actions, ruled ledgers for records.",
+      "Real Azerbaijani number plates drawn to AZS 599-2015 in Barlow Semi Condensed.",
+      "The gate verdict is a solid lit sign: green Allow or red Check the driver."
     ],
     "rules": [
-      { "name": "The Tint-and-Ink Rule", "body": "Every status appears as its soft tint behind its strong ink (green on green-soft, red on red-soft, amber on amber-soft). Never a solid status block with white text, except the deliberate danger-solid confirm button.", "section": "colors" },
-      { "name": "The Plate Blue Is Not Navy Rule", "body": "Plate Blue belongs to the number plate's region strip. UI blue is always ADA Navy.", "section": "colors" },
-      { "name": "The Stamped Code Rule", "body": "Barlow Semi Condensed is for codes printed on objects: plate numbers, permit year, tag mark, role plates. Headings, labels and body copy are always Source Sans 3.", "section": "typography" },
-      { "name": "The Only-What-Floats Rule", "body": "A shadow means the object is not on the page: a hanging tag, a toast, a dialog. Cards and panels stay flat.", "section": "elevation" }
+      { "name": "The You-Are-Here Rule", "body": "Wayfinding yellow marks location (the current nav legend), focus, and selection. Nothing else: no yellow edges, loading bars, buttons, badges or highlights.", "section": "colors" },
+      { "name": "The Lit Sign Rule", "body": "Solid colour fields are signs: navy for place, green or red for the gate verdict. Status everywhere else is a tint behind coloured ink with a small lit square.", "section": "colors" },
+      { "name": "The Light Sign Rule", "body": "Page headings are light (300) and wide, never bold; weight is reserved for the verdict.", "section": "typography" },
+      { "name": "The Plates Only Rule", "body": "Barlow Semi Condensed appears only on plates and the permit term.", "section": "typography" },
+      { "name": "The Nothing Floats Rule", "body": "Toast and dialog are the only elevated things. Cards, permits, verdicts and sign-in are flat.", "section": "elevation" },
+      { "name": "The One Device Pixel Rule", "body": "Rules are `1px`, or `.5px` at 2dppx and above, so every hairline is one device pixel.", "section": "elevation" }
     ],
     "dos": [
-      "Do use ADA Navy for the header band, primary actions and links, and keep the ADA logomark white on navy.",
-      "Do show every status as tint plus ink from the allow / check / wait triad, with the status dot on pills.",
-      "Do render plate numbers with the plate component, never as plain text in the Plate font.",
-      "Do keep Barlow Semi Condensed to stamped codes (plates, permit year, tag mark, role plates), tracked, at 600.",
-      "Do give every interactive element the 3px Focus Amber ring and touch rows at least 44px.",
-      "Do label demo affordances as prototype (\"Prototype: sign in as a demo account\") and keep them in the stub, below the real sign-in.",
-      "Do switch off all motion under prefers-reduced-motion."
+      "Do keep Wayfinding Yellow to the current-section bar, the focus ring and selection.",
+      "Do put records in ledgers on the hall (1px Ink header rule, hairline rows) and keep white cards for things the user acts on.",
+      "Do open every section with the page sign: navy pictogram tile, light 300 heading, hairline beneath.",
+      "Do draw plates with the shared plate component and unit system; never type a plate as plain text.",
+      "Do show permanence: replaced and rejected statuses are struck through, void permits fade their plate, nothing is removed from view.",
+      "Do keep the gate's vocabulary \"Allow\" / \"Check the driver\"; the gate advises, it does not block.",
+      "Do give every movement a fade-only or static path under reduced motion.",
+      "Do keep hairlines to one device pixel and corners to 4px (2px for inner tiles)."
     ],
     "donts": [
-      "Don't recreate the old MyADA teal sign-in or move off ADA navy; the app has its own world.",
-      "Don't put the sign-in on a floating white rectangle over a gradient; it is the hang-tag.",
-      "Don't use Plate Blue as a UI colour or Navy as the plate strip.",
-      "Don't add shadows to cards, inputs or panels; shadows are for the hanging tag, toasts and dialogs.",
-      "Don't call a gate verdict \"denied\" or \"blocked\"; the vocabulary is \"Allow\" and \"Check the driver\", because the gate never auto-blocks.",
-      "Don't add motion beyond the hang-tag's single swing, the stub tear and the toast fade."
+      "Don't use yellow for edges, loading bars, buttons, badges or emphasis.",
+      "Don't wrap record lists in white cards.",
+      "Don't add shadows to cards, permits or verdicts; only toast and dialog float.",
+      "Don't set page headings bold or use Barlow Semi Condensed outside plates and the permit term.",
+      "Don't add a second authored animation; the gate is the one moment.",
+      "Don't drift toward the grey SaaS card dashboard or the dark neon HUD."
     ]
   }
 }

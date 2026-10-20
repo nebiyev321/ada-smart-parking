@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Literal, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -35,6 +35,15 @@ def now() -> datetime:
 
 def iso(dt: datetime) -> str:
     return dt.isoformat(timespec="seconds")
+
+
+def campus_today() -> date:
+    """Today's date on campus, whatever the server's clock zone."""
+    return now().astimezone(BAKU).date()
+
+
+def campus_midnight(day: date) -> str:
+    return iso(datetime(day.year, day.month, day.day, tzinfo=BAKU).astimezone(timezone.utc))
 
 
 def normalize_plate(plate: str) -> str:
@@ -116,7 +125,8 @@ def setting(key: str) -> str:
 def permit_end(affiliation: str, start: datetime) -> datetime:
     """Students: end of the academic year (30 June, 23:59 in Baku). Faculty and staff: one year."""
     if affiliation == "student":
-        year = start.year if start.month < 7 else start.year + 1
+        local = start.astimezone(BAKU)  # 1 July 00:00 in Baku is still 30 June in UTC
+        year = local.year if local.month < 7 else local.year + 1
         return datetime(year, 6, 30, 23, 59, 59, tzinfo=BAKU).astimezone(timezone.utc)
     return start + timedelta(days=365)
 
@@ -145,7 +155,7 @@ def permit_view(permit_id: Optional[int]):
     if not permit_id:
         return None
     row = conn().execute(
-        """SELECT p.id, p.status, p.valid_from, p.valid_until, p.reason, p.created_at,
+        """SELECT p.id, p.status, p.valid_from, p.valid_until, p.reason, p.created_at, p.renews_permit_id,
                   v.id AS vehicle_id, v.plate_display, v.plate_normalized, v.make, v.model, v.color
            FROM permits p JOIN vehicles v ON v.id=p.vehicle_id WHERE p.id=?""",
         (permit_id,),
@@ -210,6 +220,28 @@ class VehicleIn(BaseModel):
     color: str = Field(min_length=1, max_length=30, pattern=TEXT)
 
 
+def renewal_state(user_id, active_id, pending_id):
+    """Owners can renew once their permit is within the renewal window of its end date."""
+    if not active_id:
+        return None
+    active = conn().execute("SELECT valid_from, valid_until FROM permits WHERE id=?", (active_id,)).fetchone()
+    window = int(setting("renewal_window_days"))
+    opens = datetime.fromisoformat(active["valid_until"]) - timedelta(days=window)
+    pending = permit_view(pending_id)
+    affiliation = conn().execute("SELECT affiliation FROM users WHERE id=?", (user_id,)).fetchone()["affiliation"]
+    return {
+        "opens_at": iso(opens),
+        "due": now() >= opens,
+        "requested": bool(pending and pending["renews_permit_id"] == active_id),
+        "next_valid_until": iso(renewed_until(affiliation, active["valid_until"])),
+    }
+
+
+def renewed_until(affiliation: str, valid_until: str) -> datetime:
+    """A renewal continues from the moment the current permit ends."""
+    return permit_end(affiliation, datetime.fromisoformat(valid_until) + timedelta(seconds=1))
+
+
 @app.get("/api/v1/me")
 def me(user=Depends(current_user)):
     uid = user["id"]
@@ -223,6 +255,7 @@ def me(user=Depends(current_user)):
     ).fetchone()
     allowed, next_at, override = change_window(uid)
     return {
+        "renewal": renewal_state(uid, active and active["id"], pending and pending["id"]),
         "user": {k: user[k] for k in ("id", "myada_user_id", "full_name", "email", "affiliation")},
         "roles": sorted(user["roles"]),
         "active_permit": permit_view(active and active["id"]),
@@ -305,6 +338,27 @@ def request_change(body: VehicleIn, user=Depends(current_user)):
     return {"change_request_id": cr, "permit": permit_view(pid)}
 
 
+@app.post("/api/v1/me/renewal", status_code=201)
+def request_renewal(user=Depends(current_user)):
+    """Same vehicle, next term. The parking office approves it; the current permit stays valid meanwhile."""
+    uid = user["id"]
+    active = conn().execute("SELECT * FROM permits WHERE user_id=? AND status='active'", (uid,)).fetchone()
+    if not active:
+        raise HTTPException(409, "You need an active permit to renew. Register your vehicle instead.")
+    if conn().execute("SELECT 1 FROM permits WHERE user_id=? AND status='pending'", (uid,)).fetchone():
+        raise HTTPException(409, "You already have a request waiting for approval")
+    state = renewal_state(uid, active["id"], None)
+    if not state["due"]:
+        raise HTTPException(409, detail={"message": "Renewal opens later", "next_allowed_at": state["opens_at"]})
+    with db.tx(conn()) as c:
+        pid = c.execute(
+            "INSERT INTO permits (user_id, vehicle_id, status, created_at, renews_permit_id) VALUES (?,?, 'pending', ?, ?)",
+            (uid, active["vehicle_id"], iso(now()), active["id"]),
+        ).lastrowid
+        audit(uid, "renewal_requested", "permit", pid, renews=active["id"])
+    return permit_view(pid)
+
+
 @app.get("/api/v1/me/gate-events")
 def my_gate_events(user=Depends(current_user)):
     rows = conn().execute(
@@ -326,6 +380,136 @@ def my_messages(user=Depends(current_user)):
     return [dict(r) for r in rows]
 
 
+# ---------------------------------------------------------------- visitor passes
+
+class DecisionIn(BaseModel):
+    reason: Optional[str] = Field(default=None, max_length=300)
+
+
+
+PASSES_PER_DAY = 3
+PASS_DAYS_AHEAD = 30
+
+
+class VisitorPassIn(BaseModel):
+    plate: str = Field(min_length=3, max_length=16, pattern=PLATE)
+    guest_name: Optional[str] = Field(default=None, max_length=60, pattern=TEXT)
+    valid_on: date
+
+
+def pass_view(row):
+    return {k: row[k] for k in ("id", "plate_display", "guest_name", "valid_on", "host", "created_at", "status", "reason")}
+
+
+PASS_SELECT = """SELECT vp.id, vp.plate_display, vp.guest_name, vp.valid_on, vp.created_at, vp.status, vp.reason,
+                        u.full_name AS host, u.affiliation AS host_affiliation
+                 FROM visitor_passes vp JOIN users u ON u.id=vp.host_id"""
+
+
+@app.post("/api/v1/visitor-passes", status_code=201)
+def issue_visitor_pass(body: VisitorPassIn, user=Depends(current_user)):
+    """Any ADA member can ask to let a guest's car in for a day. Guards or admins approve it first;
+    a pass they issue themselves is approved at once. Admins have no daily limit."""
+    today = campus_today()
+    if body.valid_on < today:
+        raise HTTPException(422, "Pick today or a later date.")
+    if body.valid_on > today + timedelta(days=PASS_DAYS_AHEAD):
+        raise HTTPException(422, f"Passes can be issued up to {PASS_DAYS_AHEAD} days ahead.")
+    plate_norm = normalize_plate(body.plate)
+    if len(plate_norm) < 3:
+        raise HTTPException(422, "Plate number looks too short")
+    day = body.valid_on.isoformat()
+    if conn().execute(
+        """SELECT 1 FROM permits p JOIN vehicles v ON v.id=p.vehicle_id
+           WHERE v.plate_normalized=? AND p.status='active'""", (plate_norm,)
+    ).fetchone():
+        raise HTTPException(409, "This plate already has a parking permit, so it doesn't need a visitor pass.")
+    if conn().execute(
+        """SELECT 1 FROM visitor_passes WHERE plate_normalized=? AND valid_on=? AND revoked_at IS NULL
+           AND status<>'rejected'""", (plate_norm, day)
+    ).fetchone():
+        raise HTTPException(409, "This plate already has a visitor pass for that day.")
+    if not user["roles"] & set(ADMINS):
+        issued = conn().execute(
+            """SELECT COUNT(*) AS n FROM visitor_passes WHERE host_id=? AND valid_on=? AND revoked_at IS NULL
+               AND status<>'rejected'""", (user["id"], day)
+        ).fetchone()["n"]
+        if issued >= PASSES_PER_DAY:
+            raise HTTPException(409, f"You can issue up to {PASSES_PER_DAY} visitor passes for one day.")
+    staff = bool(user["roles"] & set(STAFF))
+    ts = iso(now())
+    with db.tx(conn()) as c:
+        pid = c.execute(
+            """INSERT INTO visitor_passes (host_id, plate_display, plate_normalized, guest_name, valid_on, created_at,
+                                           status, decided_by, decided_at)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (user["id"], body.plate.strip().upper(), plate_norm, (body.guest_name or "").strip() or None, day, ts,
+             "approved" if staff else "pending", user["id"] if staff else None, ts if staff else None),
+        ).lastrowid
+        audit(user["id"], "visitor_pass_issued", "visitor_pass", pid, plate=plate_norm, valid_on=day, needs_approval=not staff)
+    return pass_view(conn().execute(PASS_SELECT + " WHERE vp.id=?", (pid,)).fetchone())
+
+
+@app.get("/api/v1/me/visitor-passes")
+def my_visitor_passes(user=Depends(current_user)):
+    rows = conn().execute(
+        PASS_SELECT + " WHERE vp.host_id=? AND vp.valid_on>=? AND vp.revoked_at IS NULL ORDER BY vp.valid_on, vp.id",
+        (user["id"], campus_today().isoformat()),
+    ).fetchall()
+    return [pass_view(r) for r in rows]
+
+
+@app.get("/api/v1/admin/visitor-passes/pending")
+def pending_visitor_passes(user=Depends(require(*STAFF))):
+    rows = conn().execute(
+        PASS_SELECT + " WHERE vp.status='pending' AND vp.revoked_at IS NULL AND vp.valid_on>=? ORDER BY vp.valid_on, vp.id",
+        (campus_today().isoformat(),),
+    ).fetchall()
+    return [dict(pass_view(r), host_affiliation=r["host_affiliation"]) for r in rows]
+
+
+def _decide_pass(pass_id: int, status: str, user, reason=None):
+    vp = conn().execute("SELECT status, revoked_at, valid_on FROM visitor_passes WHERE id=?", (pass_id,)).fetchone()
+    if not vp:
+        raise HTTPException(404, "Visitor pass not found")
+    if vp["revoked_at"]:
+        raise HTTPException(409, "The host cancelled this pass")
+    if vp["status"] != "pending":
+        raise HTTPException(409, f"This pass was already {vp['status']}")
+    if vp["valid_on"] < campus_today().isoformat():
+        raise HTTPException(409, "This pass was for a day that has passed")
+    with db.tx(conn()) as c:
+        c.execute("UPDATE visitor_passes SET status=?, decided_by=?, decided_at=?, reason=? WHERE id=?",
+                  (status, user["id"], iso(now()), reason, pass_id))
+        audit(user["id"], f"visitor_pass_{status}", "visitor_pass", pass_id, **({"reason": reason} if reason else {}))
+    return pass_view(conn().execute(PASS_SELECT + " WHERE vp.id=?", (pass_id,)).fetchone())
+
+
+@app.post("/api/v1/admin/visitor-passes/{pass_id}/approve")
+def approve_visitor_pass(pass_id: int, user=Depends(require(*STAFF))):
+    return _decide_pass(pass_id, "approved", user)
+
+
+@app.post("/api/v1/admin/visitor-passes/{pass_id}/reject")
+def reject_visitor_pass(pass_id: int, body: DecisionIn, user=Depends(require(*STAFF))):
+    if not body.reason:
+        raise HTTPException(422, "A reason is required when rejecting")
+    return _decide_pass(pass_id, "rejected", user, body.reason)
+
+
+@app.post("/api/v1/visitor-passes/{pass_id}/revoke")
+def revoke_visitor_pass(pass_id: int, user=Depends(current_user)):
+    vp = conn().execute("SELECT host_id, revoked_at FROM visitor_passes WHERE id=?", (pass_id,)).fetchone()
+    if not vp or (vp["host_id"] != user["id"] and not user["roles"] & set(ADMINS)):
+        raise HTTPException(404, "Visitor pass not found")
+    if vp["revoked_at"]:
+        raise HTTPException(409, "This pass was already cancelled")
+    with db.tx(conn()) as c:
+        c.execute("UPDATE visitor_passes SET revoked_at=? WHERE id=?", (iso(now()), pass_id))
+        audit(user["id"], "visitor_pass_revoked", "visitor_pass", pass_id)
+    return {"revoked": True}
+
+
 # ---------------------------------------------------------------- guards and admins
 
 @app.get("/api/v1/admin/vehicles")
@@ -339,6 +523,10 @@ def search_vehicles(plate: str = Query(min_length=2), user=Depends(require(*STAF
            FROM vehicles v JOIN users u ON u.id=v.owner_id
            JOIN permits p ON p.vehicle_id=v.id
            WHERE v.plate_normalized LIKE ?
+             -- A renewed vehicle has several permits; show only the one that matters now.
+             AND p.id = (SELECT p2.id FROM permits p2 WHERE p2.vehicle_id=v.id
+                         ORDER BY CASE p2.status WHEN 'active' THEN 0 WHEN 'suspended' THEN 1 WHEN 'pending' THEN 2 ELSE 3 END,
+                                  p2.id DESC LIMIT 1)
            ORDER BY CASE p.status WHEN 'active' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END, p.id DESC
            LIMIT 25""",
         (f"%{normalize_plate(plate)}%",),
@@ -351,6 +539,7 @@ def search_vehicles(plate: str = Query(min_length=2), user=Depends(require(*STAF
             (r["plate_normalized"],),
         ).fetchone()
         item["last_event"] = dict(last) if last else None
+        item["repeat"] = repeat_entries(r["plate_normalized"])
         if not is_admin:
             item.pop("email"), item.pop("phone")
         out.append(item)
@@ -358,6 +547,39 @@ def search_vehicles(plate: str = Query(min_length=2), user=Depends(require(*STAF
         audit(user["id"], "plate_search", query=normalize_plate(plate), results=len(out),
               contact_details_shown=is_admin and bool(out))
     return out
+
+
+@app.get("/api/v1/admin/vehicles/all")
+def all_vehicles(user=Depends(require(*STAFF))):
+    """Every registered vehicle with its current permit, active ones first. No contact details here."""
+    rows = conn().execute(
+        """SELECT v.plate_display, v.make, v.model, v.color, u.full_name, u.affiliation, p.status, p.valid_until
+           FROM vehicles v JOIN users u ON u.id=v.owner_id JOIN permits p ON p.vehicle_id=v.id
+           WHERE p.id = (SELECT p2.id FROM permits p2 WHERE p2.vehicle_id=v.id
+                         ORDER BY CASE p2.status WHEN 'active' THEN 0 WHEN 'suspended' THEN 1 WHEN 'pending' THEN 2 ELSE 3 END,
+                                  p2.id DESC LIMIT 1)
+           ORDER BY CASE p.status WHEN 'active' THEN 0 WHEN 'pending' THEN 1 WHEN 'suspended' THEN 2 ELSE 3 END,
+                    v.plate_normalized
+           LIMIT 2000"""
+    ).fetchall()
+    with db.tx(conn()):
+        audit(user["id"], "vehicle_list_viewed", results=len(rows))
+    return [dict(r) for r in rows]
+
+
+@app.get("/api/v1/admin/flagged-plates")
+def flagged_plates(plate: str = Query(min_length=2), user=Depends(require(*STAFF))):
+    """Plates with no registered vehicle that came in without a permit or pass three or more times."""
+    rows = conn().execute(
+        """SELECT g.plate_normalized, MAX(g.plate_display) AS plate_display, COUNT(*) AS n,
+                  MIN(g.occurred_at) AS first_at, MAX(g.occurred_at) AS last_at
+           FROM gate_events g
+           WHERE g.plate_normalized LIKE ? AND g.authorized=0 AND g.direction='in'
+             AND NOT EXISTS (SELECT 1 FROM vehicles v WHERE v.plate_normalized=g.plate_normalized)
+           GROUP BY g.plate_normalized HAVING COUNT(*) >= ? ORDER BY n DESC LIMIT 25""",
+        (f"%{normalize_plate(plate)}%", REPEAT_THRESHOLD),
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
 class GateEventIn(BaseModel):
@@ -374,16 +596,28 @@ def _record_gate_event(plate: str, direction: str, gate_id: str, source: str, re
            WHERE v.plate_normalized=? AND p.status='active' AND p.valid_until >= ?""",
         (plate_norm, iso(now())),
     ).fetchone()
-    authorized = permit is not None
+    visit = None
+    if not permit:
+        visit = conn().execute(
+            PASS_SELECT + " WHERE vp.plate_normalized=? AND vp.valid_on=? AND vp.revoked_at IS NULL AND vp.status=?",
+            (plate_norm, campus_today().isoformat(), "approved"),
+        ).fetchone()
+    waiting = None
+    if not permit and not visit:
+        waiting = conn().execute(
+            PASS_SELECT + " WHERE vp.plate_normalized=? AND vp.valid_on=? AND vp.revoked_at IS NULL AND vp.status=?",
+            (plate_norm, campus_today().isoformat(), "pending"),
+        ).fetchone()
+    authorized = permit is not None or visit is not None
     # Show the plate as registered when we know it, so "10ab123" at the gate reads "10-AB-123" everywhere.
-    display = permit["plate_display"] if authorized else plate.strip().upper()
+    display = permit["plate_display"] if permit else visit["plate_display"] if visit else plate.strip().upper()
     with db.tx(conn()) as c:
         eid = c.execute(
             """INSERT INTO gate_events (plate_display, plate_normalized, permit_id, authorized, direction, gate_id,
-                                        occurred_at, source, recorded_by, confidence)
-               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                                        occurred_at, source, recorded_by, confidence, visitor_pass_id)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
             (display, plate_norm, permit and permit["id"], int(authorized), direction, gate_id,
-             iso(now()), source, recorded_by, confidence),
+             iso(now()), source, recorded_by, confidence, visit and visit["id"]),
         ).lastrowid
     return {
         "event_id": eid,
@@ -394,7 +628,23 @@ def _record_gate_event(plate: str, direction: str, gate_id: str, source: str, re
         "owner": permit and permit["full_name"],
         "affiliation": permit and permit["affiliation"],
         "vehicle": permit and f'{permit["color"]} {permit["make"]} {permit["model"]}',
+        "visitor": visit and {"host": visit["host"], "guest_name": visit["guest_name"]},
+        "pending_pass": waiting and {"id": waiting["id"], "host": waiting["host"], "guest_name": waiting["guest_name"]},
+        "repeat": None if authorized else repeat_entries(plate_norm),
     }
+
+
+REPEAT_THRESHOLD = 3
+
+
+def repeat_entries(plate_norm: str):
+    """Entries without a permit or pass. Three or more flag the plate; the gate still never blocks."""
+    row = conn().execute(
+        """SELECT COUNT(*) AS n, MIN(occurred_at) AS first_at, MAX(occurred_at) AS last_at FROM gate_events
+           WHERE plate_normalized=? AND authorized=0 AND direction='in'""",
+        (plate_norm,),
+    ).fetchone()
+    return dict(row) if row["n"] >= REPEAT_THRESHOLD else None
 
 
 @app.post("/api/v1/admin/gate-events", status_code=201)
@@ -425,9 +675,10 @@ def list_gate_events(
     user=Depends(require(*STAFF)),
 ):
     sql = """SELECT g.id, g.occurred_at, g.direction, g.gate_id, g.plate_display, g.authorized, g.source,
-                    u.full_name AS owner, rec.full_name AS recorded_by
+                    u.full_name AS owner, host.full_name AS visitor_of, rec.full_name AS recorded_by
              FROM gate_events g
              LEFT JOIN permits p ON p.id=g.permit_id LEFT JOIN users u ON u.id=p.user_id
+             LEFT JOIN visitor_passes vp ON vp.id=g.visitor_pass_id LEFT JOIN users host ON host.id=vp.host_id
              LEFT JOIN users rec ON rec.id=g.recorded_by WHERE 1=1"""
     args = []
     if plate:
@@ -452,6 +703,35 @@ def list_gate_events(
     return rows
 
 
+@app.get("/api/v1/admin/on-campus")
+def on_campus(user=Depends(require(*STAFF))):
+    """Cars whose latest movement is an entry, oldest first, plus today's expected visitors."""
+    today = campus_today()
+    rows = conn().execute(
+        """SELECT g.plate_display, g.plate_normalized, g.occurred_at AS entered_at, g.authorized,
+                  u.full_name AS owner, host.full_name AS visitor_of, vp.guest_name
+           FROM gate_events g
+           LEFT JOIN permits p ON p.id=g.permit_id LEFT JOIN users u ON u.id=p.user_id
+           LEFT JOIN visitor_passes vp ON vp.id=g.visitor_pass_id LEFT JOIN users host ON host.id=vp.host_id
+           WHERE g.id IN (SELECT MAX(id) FROM gate_events GROUP BY plate_normalized) AND g.direction='in'
+           ORDER BY g.occurred_at, g.id"""
+    ).fetchall()
+    midnight = campus_midnight(today)
+    inside = [dict(r, authorized=bool(r["authorized"]), overnight=r["entered_at"] < midnight) for r in rows]
+    inside_plates = {r["plate_normalized"] for r in inside}
+    visitors = conn().execute(
+        """SELECT vp.id, vp.plate_display, vp.plate_normalized, vp.guest_name, u.full_name AS host,
+                  EXISTS (SELECT 1 FROM gate_events g WHERE g.visitor_pass_id=vp.id) AS arrived
+           FROM visitor_passes vp JOIN users u ON u.id=vp.host_id
+           WHERE vp.valid_on=? AND vp.revoked_at IS NULL AND vp.status='approved' ORDER BY vp.id""",
+        (today.isoformat(),),
+    ).fetchall()
+    return {
+        "inside": inside,
+        "visitors_today": [dict(v, arrived=bool(v["arrived"]), inside=v["plate_normalized"] in inside_plates) for v in visitors],
+    }
+
+
 def csv_safe(value):
     """Stops spreadsheet apps from running a cell as a formula."""
     if isinstance(value, str) and value[:1] in ("=", "+", "-", "@", "\t", "\r"):
@@ -464,17 +744,13 @@ def approval_queue(user=Depends(require(*ADMINS))):
     rows = conn().execute(
         """SELECT p.id AS permit_id, p.created_at, u.id AS user_id, u.full_name, u.affiliation, u.email,
                   v.plate_display, v.make, v.model, v.color,
-                  cr.id AS change_request_id, ov.plate_display AS replaces_plate
+                  cr.id AS change_request_id, ov.plate_display AS replaces_plate, p.renews_permit_id
            FROM permits p JOIN users u ON u.id=p.user_id JOIN vehicles v ON v.id=p.vehicle_id
            LEFT JOIN change_requests cr ON cr.new_permit_id=p.id
            LEFT JOIN permits op ON op.id=cr.old_permit_id LEFT JOIN vehicles ov ON ov.id=op.vehicle_id
            WHERE p.status='pending' ORDER BY p.created_at"""
     ).fetchall()
     return [dict(r) for r in rows]
-
-
-class DecisionIn(BaseModel):
-    reason: Optional[str] = Field(default=None, max_length=300)
 
 
 def _pending_permit(permit_id):
@@ -489,22 +765,63 @@ def approve(permit_id: int, body: DecisionIn = DecisionIn(), user=Depends(requir
     p = _pending_permit(permit_id)
     if p["status"] != "pending":
         raise HTTPException(409, f"Permit is {p['status']}, not pending")
+    with db.tx(conn()):
+        if p["renews_permit_id"]:
+            _approve_renewal(p, user["id"])
+        else:
+            _approve_new(p, user["id"], body.reason)
+    return permit_view(permit_id)
+
+
+def _approve_renewal(p, admin_id):
+    """The renewed permit takes over from the current one with no gap; the vehicle and cooldown date carry over."""
+    old = conn().execute("SELECT * FROM permits WHERE id=?", (p["renews_permit_id"],)).fetchone()
+    if old["status"] != "active":
+        raise HTTPException(409, "The permit being renewed is no longer active. The person needs to register again.")
+    owner = conn().execute("SELECT affiliation FROM users WHERE id=?", (p["user_id"],)).fetchone()
+    ts = iso(now())
+    conn().execute("UPDATE permits SET status='inactive', reason='Renewed' WHERE id=?", (old["id"],))
+    conn().execute(
+        "UPDATE permits SET status='active', valid_from=?, valid_until=?, decided_by=?, decided_at=? WHERE id=?",
+        (old["valid_from"], iso(renewed_until(owner["affiliation"], old["valid_until"])), admin_id, ts, p["id"]),
+    )
+    audit(admin_id, "renewal_approved", "permit", p["id"], renews=old["id"])
+
+
+def _approve_new(p, admin_id, reason):
+    permit_id = p["id"]
     owner = conn().execute("SELECT affiliation FROM users WHERE id=?", (p["user_id"],)).fetchone()
     start = now()
-    with db.tx(conn()) as c:
-        cr = c.execute("SELECT * FROM change_requests WHERE new_permit_id=?", (permit_id,)).fetchone()
-        if cr:
-            # The old vehicle stays valid until this moment, so the person is never without a permit.
-            c.execute("UPDATE permits SET status='inactive', reason='Replaced by vehicle change' WHERE id=?",
-                      (cr["old_permit_id"],))
-            c.execute("UPDATE change_requests SET status='approved', decided_at=? WHERE id=?", (iso(start), cr["id"]))
-        c.execute(
-            """UPDATE permits SET status='active', valid_from=?, valid_until=?, decided_by=?, decided_at=?, reason=?
-               WHERE id=?""",
-            (iso(start), iso(permit_end(owner["affiliation"], start)), user["id"], iso(start), body.reason, permit_id),
-        )
-        audit(user["id"], "permit_approved", "permit", permit_id, change_request=cr and cr["id"])
-    return permit_view(permit_id)
+    c = conn()
+    cr = c.execute("SELECT * FROM change_requests WHERE new_permit_id=?", (permit_id,)).fetchone()
+    if cr:
+        # The old vehicle stays valid until this moment, so the person is never without a permit.
+        c.execute("UPDATE permits SET status='inactive', reason='Replaced by vehicle change' WHERE id=?",
+                  (cr["old_permit_id"],))
+        c.execute("UPDATE change_requests SET status='approved', decided_at=? WHERE id=?", (iso(start), cr["id"]))
+    c.execute(
+        """UPDATE permits SET status='active', valid_from=?, valid_until=?, decided_by=?, decided_at=?, reason=?
+           WHERE id=?""",
+        (iso(start), iso(permit_end(owner["affiliation"], start)), admin_id, iso(start), reason, permit_id),
+    )
+    audit(admin_id, "permit_approved", "permit", permit_id, change_request=cr and cr["id"])
+
+
+@app.post("/api/v1/admin/renewals/approve-all")
+def approve_all_renewals(user=Depends(require(*ADMINS))):
+    """Renewals keep the same vehicle, so they need no individual review."""
+    pending = conn().execute(
+        "SELECT * FROM permits WHERE status='pending' AND renews_permit_id IS NOT NULL ORDER BY id"
+    ).fetchall()
+    approved, skipped = 0, 0
+    for p in pending:
+        try:
+            with db.tx(conn()):
+                _approve_renewal(p, user["id"])
+            approved += 1
+        except HTTPException:
+            skipped += 1
+    return {"approved": approved, "skipped": skipped}
 
 
 @app.post("/api/v1/admin/permits/{permit_id}/reject")
@@ -617,14 +934,24 @@ def audit_log(user=Depends(require("system_admin"))):
 
 class SettingsIn(BaseModel):
     change_cooldown_days: int = Field(ge=0, le=365)
+    renewal_window_days: Optional[int] = Field(default=None, ge=1, le=365)
 
 
 @app.put("/api/v1/admin/settings")
 def update_settings(body: SettingsIn, user=Depends(require("system_admin"))):
     with db.tx(conn()) as c:
         c.execute("UPDATE settings SET value=? WHERE key='change_cooldown_days'", (str(body.change_cooldown_days),))
-        audit(user["id"], "settings_changed", change_cooldown_days=body.change_cooldown_days)
-    return {"change_cooldown_days": body.change_cooldown_days}
+        if body.renewal_window_days is not None:
+            c.execute("UPDATE settings SET value=? WHERE key='renewal_window_days'", (str(body.renewal_window_days),))
+        audit(user["id"], "settings_changed", change_cooldown_days=body.change_cooldown_days,
+              renewal_window_days=body.renewal_window_days)
+    return {"change_cooldown_days": body.change_cooldown_days, "renewal_window_days": int(setting("renewal_window_days"))}
+
+
+@app.get("/api/v1/admin/settings")
+def read_settings(user=Depends(require("system_admin"))):
+    return {"change_cooldown_days": int(setting("change_cooldown_days")),
+            "renewal_window_days": int(setting("renewal_window_days"))}
 
 
 @app.post("/api/v1/admin/jobs/expire")
@@ -646,6 +973,12 @@ def _fingerprinted_index() -> str:
 
 
 INDEX_HTML = _fingerprinted_index()
+
+
+# An internal campus service: keep every page out of search engines.
+@app.get("/robots.txt")
+def robots():
+    return PlainTextResponse("User-agent: *\nDisallow: /\n")
 
 
 @app.get("/")

@@ -290,6 +290,14 @@ def test_static_assets_are_fingerprinted(ctx):
     assert client.get("/static/app.js").headers["cache-control"] == "no-cache"
 
 
+def test_robots_keeps_the_site_out_of_search(ctx):
+    client, _, _ = ctx
+    r = client.get("/robots.txt")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/plain")
+    assert r.text == "User-agent: *\nDisallow: /\n"
+
+
 def test_parallel_requests_do_not_share_a_cursor(ctx):
     # The owner page loads gate events and messages at the same time.
     client, login, _ = ctx
@@ -301,3 +309,120 @@ def test_parallel_requests_do_not_share_a_cursor(ctx):
     with ThreadPoolExecutor(8) as pool:
         codes = list(pool.map(lambda p: client.get(p, headers=h).status_code, paths))
     assert set(codes) == {200}
+
+
+def test_visitor_pass_lets_a_guest_in_for_that_day_only(ctx):
+    client, login, clock = ctx
+    g = login("E3001")
+    today = "2026-10-07"
+    r = client.post("/api/v1/visitor-passes", json={"plate": "77-zz-001", "guest_name": "Kamran", "valid_on": today},
+                    headers=login("S1001"))
+    assert r.status_code == 201, r.text
+    mine = client.get("/api/v1/me/visitor-passes", headers=login("S1001")).json()[0]
+    assert mine["plate_display"] == "77-ZZ-001" and mine["status"] == "pending"
+    # Until a guard or admin approves it, the gate checks the car and says a pass is waiting.
+    r = client.post("/api/v1/admin/gate-events", json={"plate": "77ZZ001", "direction": "in"}, headers=g).json()
+    assert r["authorized"] is False and r["pending_pass"]["host"] == "Leyla Mammadova"
+    assert client.get("/api/v1/admin/visitor-passes/pending", headers=g).json()[0]["id"] == mine["id"]
+    assert client.post(f"/api/v1/admin/visitor-passes/{mine['id']}/approve", headers=g).status_code == 200
+    r = client.post("/api/v1/admin/gate-events", json={"plate": "77ZZ001", "direction": "in"}, headers=g).json()
+    assert r["authorized"] and r["visitor"] == {"host": "Leyla Mammadova", "guest_name": "Kamran"}
+    log = client.get("/api/v1/admin/gate-events", headers=g).json()
+    assert log[0]["visitor_of"] == "Leyla Mammadova"
+    # The next day the same plate is checked again.
+    clock["t"] += timedelta(days=1)
+    r = client.post("/api/v1/admin/gate-events", json={"plate": "77ZZ001", "direction": "in"}, headers=g).json()
+    assert r["authorized"] is False
+
+
+def test_visitor_pass_rules(ctx):
+    client, login, _ = ctx
+    owner = login("S1002")
+    past = client.post("/api/v1/visitor-passes", json={"plate": "77ZZ001", "valid_on": "2026-10-06"}, headers=owner)
+    assert past.status_code == 422
+    for n in range(3):
+        assert client.post("/api/v1/visitor-passes", json={"plate": f"77ZZ00{n}", "valid_on": "2026-10-08"},
+                           headers=owner).status_code == 201
+    over = client.post("/api/v1/visitor-passes", json={"plate": "77ZZ009", "valid_on": "2026-10-08"}, headers=owner)
+    assert over.status_code == 409
+    # Someone else's pass cannot be cancelled; your own can, and the gate then checks the car.
+    pid = client.get("/api/v1/me/visitor-passes", headers=owner).json()[0]["id"]
+    assert client.post(f"/api/v1/visitor-passes/{pid}/revoke", headers=login("S1001")).status_code == 404
+    assert client.post(f"/api/v1/visitor-passes/{pid}/revoke", headers=owner).status_code == 200
+    register_and_approve(client, login)
+    taken = client.post("/api/v1/visitor-passes", json={"plate": "10AB123", "valid_on": "2026-10-08"}, headers=owner)
+    assert taken.status_code == 409
+
+
+def test_on_campus_lists_cars_still_inside_and_flags_overnight(ctx):
+    client, login, clock = ctx
+    register_and_approve(client, login)
+    g = login("E3001")
+    client.post("/api/v1/admin/gate-events", json={"plate": "10AB123", "direction": "in"}, headers=g)
+    client.post("/api/v1/admin/gate-events", json={"plate": "77ZZ001", "direction": "in"}, headers=g)
+    client.post("/api/v1/admin/gate-events", json={"plate": "77ZZ001", "direction": "out"}, headers=g)
+    clock["t"] += timedelta(days=1)
+    client.post("/api/v1/admin/gate-events", json={"plate": "55QQ555", "direction": "in"}, headers=g)
+    inside = client.get("/api/v1/admin/on-campus", headers=g).json()["inside"]
+    assert [(c["plate_display"], c["overnight"], c["authorized"]) for c in inside] == [
+        ("10-AB-123", True, True), ("55QQ555", False, False)]
+    assert client.get("/api/v1/admin/on-campus", headers=login("S1001")).status_code == 403
+
+
+def test_renewal_opens_near_the_end_and_continues_the_permit(ctx):
+    client, login, clock = ctx
+    pid = register_and_approve(client, login)
+    owner = login("S1001")
+    assert client.get("/api/v1/me", headers=owner).json()["renewal"]["due"] is False
+    assert client.post("/api/v1/me/renewal", headers=owner).status_code == 409
+    clock["t"] = datetime(2027, 6, 10, tzinfo=timezone.utc)
+    assert client.get("/api/v1/me", headers=owner).json()["renewal"]["due"] is True
+    r = client.post("/api/v1/me/renewal", headers=owner)
+    assert r.status_code == 201, r.text
+    queue = client.get("/api/v1/admin/queue", headers=login("E3002")).json()
+    assert queue[0]["renews_permit_id"] == pid
+    assert client.post("/api/v1/admin/renewals/approve-all", headers=login("E3002")).json() == {"approved": 1, "skipped": 0}
+    me = client.get("/api/v1/me", headers=owner).json()
+    # Next term runs to 30 June 2028 (23:59 in Baku), and the old permit is no longer the active one.
+    assert me["active_permit"]["valid_until"] == "2028-06-30T19:59:59+00:00"
+    assert me["active_permit"]["id"] != pid
+    found = client.get("/api/v1/admin/vehicles?plate=10AB", headers=login("E3001")).json()
+    assert len(found) == 1 and found[0]["status"] == "active"
+
+
+def test_repeat_entries_without_permit_are_flagged(ctx):
+    client, login, clock = ctx
+    g = login("E3001")
+    for n in range(3):
+        r = client.post("/api/v1/admin/gate-events", json={"plate": "99ZZ001", "direction": "in"}, headers=g).json()
+        assert (r["repeat"] is None) == (n < 2)
+        clock["t"] += timedelta(hours=1)
+    assert r["repeat"]["n"] == 3
+    flagged = client.get("/api/v1/admin/flagged-plates?plate=99ZZ", headers=g).json()
+    assert flagged[0]["plate_normalized"] == "99ZZ001" and flagged[0]["n"] == 3
+
+
+def test_visitor_pass_approval_rules(ctx):
+    client, login, _ = ctx
+    owner = login("S1002")
+    pid = client.post("/api/v1/visitor-passes", json={"plate": "55QQ555", "valid_on": "2026-10-07"}, headers=owner).json()["id"]
+    # Owners cannot approve; a reason is needed to reject; a decided pass cannot be decided again.
+    assert client.post(f"/api/v1/admin/visitor-passes/{pid}/approve", headers=login("S1001")).status_code == 403
+    assert client.post(f"/api/v1/admin/visitor-passes/{pid}/reject", json={}, headers=login("E3001")).status_code == 422
+    r = client.post(f"/api/v1/admin/visitor-passes/{pid}/reject", json={"reason": "Event cancelled"}, headers=login("E3001"))
+    assert r.json()["status"] == "rejected"
+    assert client.post(f"/api/v1/admin/visitor-passes/{pid}/approve", headers=login("E3002")).status_code == 409
+    assert client.get("/api/v1/me/visitor-passes", headers=owner).json()[0]["reason"] == "Event cancelled"
+    # A rejected pass frees the plate for another request; a pass a guard issues is approved at once.
+    r = client.post("/api/v1/visitor-passes", json={"plate": "55QQ555", "valid_on": "2026-10-07"}, headers=login("E3001"))
+    assert r.status_code == 201 and r.json()["status"] == "approved"
+
+
+def test_all_registered_vehicles_list(ctx):
+    client, login, _ = ctx
+    register_and_approve(client, login)
+    client.post("/api/v1/vehicles", json=CAR2, headers=login("S1002"))
+    rows = client.get("/api/v1/admin/vehicles/all", headers=login("E3001")).json()
+    assert [(r["plate_display"], r["status"]) for r in rows] == [("10-AB-123", "active"), ("90 XY 777", "pending")]
+    assert "email" not in rows[0] and "phone" not in rows[0]
+    assert client.get("/api/v1/admin/vehicles/all", headers=login("S1001")).status_code == 403
