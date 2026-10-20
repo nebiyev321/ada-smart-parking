@@ -390,11 +390,18 @@ function bindForm(id, fn) {
 const vehicleLine = (p, lg) => `<div class="vehicle">${plate(p.plate_display, lg)}
   <span class="desc">${esc(p.color)} ${esc(p.make)} ${esc(p.model)}</span> ${status(p.status)}</div>`;
 
-// Column titles are English keys, translated here so data-label (the phone layout) matches the header.
-const table = (cols, rows) => `<div class="table"><table>
+// Column titles are English keys: data-col keeps the key for the phone layout's CSS, data-label carries the
+// translated title it shows. compact lays a record out as plate beside details on a phone; limit shows the
+// first rows and a "Show all" button.
+const table = (cols, rows, { compact = false, limit = 0 } = {}) => {
+  const more = limit > 0 && rows.length > limit;
+  return `<div class="table${compact ? " compact" : ""}${more ? " collapsed" : ""}"><table>
   <thead><tr>${cols.map(c => `<th scope="col">${esc(t(c))}</th>`).join("")}</tr></thead>
-  <tbody>${rows.map(r => `<tr>${r.map((cell, i) => `<td data-label="${esc(t(cols[i]))}"${i === r.length - 1 && cols[i] === "" ? ' class="actions-cell"' : ""}>${cell}</td>`).join("")}</tr>`).join("")}</tbody>
-  </table></div>`;
+  <tbody>${rows.map((r, n) => `<tr${more && n >= limit ? ' class="more"' : ""}>${r.map((cell, i) => `<td data-col="${esc(cols[i])}" data-label="${esc(t(cols[i]))}"${i === r.length - 1 && cols[i] === "" ? ' class="actions-cell"' : ""}>${cell}</td>`).join("")}</tr>`).join("")}</tbody>
+  </table></div>${more ? `<button type="button" class="ghost show-more" data-action="showMore">${esc(t("Show all ({n})", { n: rows.length }))}</button>` : ""}`;
+};
+// Phones and tablets: no hover. There the keyboard covers half the screen, so it opens only when asked.
+const canHover = () => matchMedia("(hover: hover)").matches;
 
 // The owner's permit as a sign: the plate on navy, the state lit beneath it.
 const STRIP = { active: "allow", pending: "wait", suspended: "check", expired: "check", rejected: "check", inactive: "idle" };
@@ -465,7 +472,7 @@ const VIEWS = {
     if (msgs.length) side += `<section class="card"><h2>${esc(t("Messages from campus security"))}</h2><ul class="messages">${msgs.map(m => `<li class="message">
       <h3>${esc(t(m.subject))}</h3><span class="muted">${esc(m.sender)}, ${esc(fmt(m.created_at))}</span><p>${esc(tMessage(m.body))}</p></li>`).join("")}</ul></section>`;
     const moves = `<section class="ledger"><h2>${esc(t("My entries and exits"))}</h2>${events.length
-      ? table(["Time", "Movement", "Plate"], events.map(e => [esc(fmt(e.occurred_at)), esc(t(e.direction === "in" ? "Entered" : "Left")), plate(e.plate_display)]))
+      ? table(["Time", "Movement", "Plate"], events.map(e => [esc(fmt(e.occurred_at)), esc(t(e.direction === "in" ? "Entered" : "Left")), plate(e.plate_display)]), { compact: true, limit: 8 })
       : `<p class="muted">${esc(t("Your entries and exits appear here once you drive through a campus gate."))}</p>`}</section>`;
     // With nothing else beside the permit, the movements fill that column instead of leaving it empty.
     const html = page("My vehicle") + `<div class="owner"><div class="owner-tag">${tag}</div><div class="owner-side">${side || moves}</div></div>` + (side ? moves : "");
@@ -489,13 +496,13 @@ const VIEWS = {
             esc(c.overnight ? fmt(c.entered_at) : t("Today, {time}", { time: time(c.entered_at) })), plate(c.plate_display),
             c.authorized ? driver(c) : `<span class="muted">${esc(t("Not on record"))}</span>`,
             [c.overnight ? `<span class="status s-pending">${esc(t("Overnight"))}</span>` : "", c.authorized ? "" : `<span class="status s-none">${esc(t("No permit"))}</span>`].join(" ") || `<span class="muted">${esc(t("None"))}</span>`,
-          ]))
+          ]), { compact: true })
         : `<p class="muted">${esc(t("No cars are inside. Entries recorded at the gate appear here until the car leaves."))}</p>`}</section>
       <section class="ledger"><h2>${esc(t("Visitors expected today"))}</h2>${guests.length
         ? table(["Plate", "Guest", "Host", "Status"], guests.map(v => [
             plate(v.plate_display), esc(v.guest_name || t("Not given")), esc(v.host),
             v.inside ? `<span class="status s-active">${esc(t("Inside"))}</span>` : v.arrived ? esc(t("Left")) : `<span class="muted">${esc(t("Not arrived"))}</span>`,
-          ]))
+          ]), { compact: true })
         : `<p class="muted">${esc(t("No visitor passes for today. ADA members issue them from My vehicle."))}</p>`}</section>`;
   },
 
@@ -522,13 +529,13 @@ const VIEWS = {
       <div class="err" role="alert"></div></div><div id="sres" aria-live="polite"></div>
       <section class="ledger" id="sall"><h2>${esc(t("All registered vehicles"))}</h2><p class="muted">${esc(t("Loading…"))}</p></section>`;
     $("#sform").onsubmit = e => { e.preventDefault(); busy($("#sform button"), runSearch); };
-    $("#sq").focus();
+    if (canHover()) $("#sq").focus();
     const all = await api("/admin/vehicles/all");
     $("#sall").innerHTML = `<h2>${esc(t("All registered vehicles"))} <span class="muted">${all.length}</span></h2>${all.length
       ? table(["Plate", "Vehicle", "Owner", "Status", "Valid until"], all.map(v => [
           plate(v.plate_display), `${esc(v.color)} ${esc(v.make)} ${esc(v.model)}`,
           `${esc(v.full_name)}<span class="sub">${esc(label(v.affiliation))}</span>`, status(v.status), v.status === "active" ? esc(day(v.valid_until)) : "",
-        ]))
+        ]), { compact: true, limit: 25 })
       : `<p class="muted">${esc(t("No vehicles are registered yet."))}</p>`}`;
   },
 
@@ -542,7 +549,7 @@ const VIEWS = {
           esc(dayOf(v.valid_on)), plate(v.plate_display), esc(v.guest_name || t("Not given")),
           `${esc(v.host)}<span class="sub">${esc(label(v.host_affiliation))}</span>`,
           decide("approvePass", "rejectPass", `data-id="${v.id}" data-plate="${esc(v.plate_display)}"`),
-        ]))
+        ]), { compact: true })
       : `<p class="muted">${esc(t("No visitor passes are waiting. Passes ADA members ask for appear here."))}</p>`}</section>`;
     $("#view").innerHTML = page("Approvals", `<span class="page-count">${esc(waiting ? t("{n} waiting", { n: waiting }) : t("Nothing waiting"))}</span>`
       + (renewals ? `<button type="button" data-action="approveRenewals">${esc(t("Approve all renewals ({n})", { n: renewals }))}</button>` : ""))
@@ -580,7 +587,7 @@ const VIEWS = {
       <div class="ledger"><h2>${esc(t("Audit log"))}</h2>${rows.length ? table(["Time", "Who", "Action", "Details"], rows.map(r => [
         esc(fmt(r.created_at)), esc(r.actor || t("System")), esc(label(r.action)),
         `<span class="details">${esc([r.target_type ? `${label(r.target_type)} ${r.target_id}` : "", details(r.details)].filter(Boolean).join("; "))}</span>`,
-      ])) : `<p class="muted">${esc(t("Nothing recorded yet."))}</p>`}</div>`;
+      ]), { limit: 30 }) : `<p class="muted">${esc(t("Nothing recorded yet."))}</p>`}</div>`;
     $("#settings").onsubmit = async e => {
       e.preventDefault();
       const err = $("#settings + .err"); err.textContent = "";
@@ -632,7 +639,7 @@ const eventsTable = (rows, full) => table(
     esc(fmt(e.occurred_at)), plate(e.plate_display), esc(t(e.direction === "in" ? "In" : "Out")),
     driver(e),
     ...(full ? [esc(e.source === "manual" ? t("Guard") : e.source.toUpperCase()), esc(e.recorded_by || t("Gate device"))] : []),
-  ]));
+  ]), { compact: true, limit: full ? 50 : 0 });
 
 async function gateRecent(fresh) {
   const rows = (await api("/admin/gate-events")).slice(0, 10);
@@ -674,7 +681,8 @@ async function recordGate(btn) {
            ${r.repeat ? `<p class="verdict-flag">${repeatLine(r.repeat)}</p>` : ""}<p class="muted">${what}</p></div></div>`;
       flyPlate(from, $("#gres .plate"));
       replay($(".scanner"), "scan", 600);
-      input.value = ""; input.focus({ preventScroll: true });
+      input.value = "";
+      if (canHover()) input.focus({ preventScroll: true });
       $("#gres .verdict").scrollIntoView({ block: "nearest", behavior: calm() ? "auto" : "smooth" });
       gateRecent(r.authorized ? "allow" : "check").catch(() => {});
     } catch (x) { err.textContent = x.message; }
@@ -689,7 +697,7 @@ async function runSearch() {
     const [rows, flagged] = await Promise.all([api("/admin/vehicles?plate=" + encodeURIComponent(q)), api("/admin/flagged-plates?plate=" + encodeURIComponent(q))]);
     const admin = has(...ADMINS);
     const unknown = flagged.length ? `<section class="ledger"><h2>${esc(t("Entering without a permit"))}</h2>${table(["Plate", "Entries without a permit", "Last seen"], flagged.map(f => [
-      plate(f.plate_display), `<span class="status s-none">${esc(t("{n} times", { n: f.n }))}</span><span class="sub">${esc(t("Since {date}", { date: day(f.first_at) }))}</span>`, esc(fmt(f.last_at))]))}</section>` : "";
+      plate(f.plate_display), `<span class="status s-none">${esc(t("{n} times", { n: f.n }))}</span><span class="sub">${esc(t("Since {date}", { date: day(f.first_at) }))}</span>`, esc(fmt(f.last_at))]), { compact: true })}</section>` : "";
     const templates = ["move", "incident", "lights"].map((v, i) => `<option value="${v}">${esc(t(["Please move your vehicle", "Your vehicle was involved in an incident", "Your vehicle's lights are on"][i]))}</option>`).join("");
     $("#sres").innerHTML = !rows.length && unknown ? unknown : (rows.length ? `<div class="card results">` + rows.map(r => `<article class="result">
       ${vehicleLine(r)}${r.repeat ? `<p class="flag">${repeatLine(r.repeat)}</p>` : ""}
@@ -749,6 +757,7 @@ const ACTIONS = {
     $(`[data-action="toggleLang"]`)?.focus();
   },
   print() { window.print(); },
+  showMore(b) { b.previousElementSibling?.classList.remove("collapsed"); b.remove(); },
   async renew() {
     await api("/me/renewal", { method: "POST" });
     toast(t("Renewal requested")); await render();
@@ -825,7 +834,7 @@ document.addEventListener("click", e => {
   e.preventDefault();
   const run = () => ACTIONS[b.dataset.action](b);
   // Display switches act at once; actions that open a dialog manage their own flow; the rest lock the button while they run.
-  if (b.dataset.action === "toggleTheme" || b.dataset.action === "print") return run();
+  if (["toggleTheme", "print", "showMore"].includes(b.dataset.action)) return run();
   const guarded = b.dataset.action === "gate" ? run() : busy(b, run);
   Promise.resolve(guarded).catch(x => { if (x.message !== "Signed out") toast(x.message, "error"); });
 });

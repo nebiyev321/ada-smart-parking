@@ -23,6 +23,7 @@ const AZ = {
   "Today": "Bu gün",
   "Tomorrow": "Sabah",
   "Plate {plate}": "Nömrə {plate}",
+  "Show all ({n})": "Hamısını göstər ({n})",
 
   // Fields and validation
   "Plate number": "Nömrə nişanı",

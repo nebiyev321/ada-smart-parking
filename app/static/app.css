@@ -50,7 +50,8 @@
 [hidden] { display: none !important; }
 
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; scrollbar-color: var(--stroke) transparent; scrollbar-gutter: stable; }
+html { -webkit-text-size-adjust: 100%; scrollbar-color: var(--stroke) transparent; scrollbar-gutter: stable; -webkit-tap-highlight-color: transparent; }
+button, a, select, label { touch-action: manipulation; }
 body { margin: 0; font: 400 16px/1.55 var(--ui); background: var(--hall); color: var(--ink); font-variant-numeric: tabular-nums; }
 h1, h2, h3 { line-height: 1.2; margin: 0 0 .6em; text-wrap: balance; }
 h2 { font-size: 1.125rem; font-weight: 600; letter-spacing: -.005em; }
@@ -298,7 +299,7 @@ td.actions-cell button { margin-left: 6px; }
 .passes { list-style: none; margin: 0 0 18px; padding: 0; }
 .pass { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; padding: 10px 0; border-top: var(--hair) solid var(--line); }
 .pass:last-child { border-bottom: var(--hair) solid var(--line); }
-.pass > span:not(.status) { flex: 1 1 8rem; }
+.pass > span:not(.status):not(.plate) { flex: 1 1 8rem; }
 .pass button { min-height: 36px; padding: 6px 12px 4px; }
 /* Repeat entries without a permit: said plainly, never as a block */
 .flag { color: var(--check); font-weight: 600; }
@@ -366,7 +367,7 @@ body[data-screen="login"] main { max-width: none; padding: 0; }
 .demo-role.staff { color: #fff; background: var(--sign); }
 
 /* Toast and dialog: the only things that float */
-#toast { position: fixed; left: 50%; bottom: 20px; z-index: 40; transform: translate(-50%, 12px) scale(.98); background: var(--sign); color: #fff; padding: 12px 18px 10px;
+#toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 40; transform: translate(-50%, 12px) scale(.98); background: var(--sign); color: #fff; padding: 12px 18px 10px;
   border-radius: var(--r); max-width: calc(100vw - 32px); box-shadow: 0 8px 28px rgba(8, 20, 45, .28); opacity: 0; pointer-events: none;
   transition: opacity .15s, transform .15s var(--ease-in); }
 #toast.show { opacity: 1; transform: translate(-50%, 0); transition: opacity .2s, transform .32s var(--ease-out); }
@@ -420,7 +421,7 @@ dialog .actions { justify-content: flex-end; }
   td:empty { display: none; }
   td::before { content: attr(data-label); color: var(--muted); font-size: .8rem; font-weight: 600; }
   /* The plate leads each record */
-  td[data-label="Plate"], td[data-label="Vehicle"] { order: -1; padding-bottom: 6px; }
+  td[data-col="Plate"], td[data-col="Vehicle"] { order: -1; padding-bottom: 6px; }
   td > .sub { grid-column: 2; }
   td[data-label=""] { grid-template-columns: 1fr; }
   td[data-label=""]::before { display: none; }
@@ -439,6 +440,78 @@ dialog .actions { justify-content: flex-end; }
   .demo-roles { grid-column: 1; grid-row: auto; justify-content: flex-start; max-width: none; margin-top: 4px; }
 }
 @media (pointer: fine) { .demo-list .demo { min-height: 44px; } }
+
+/* Phones: every screen is read at arm's length and worked with a thumb */
+.show-more { margin-top: 12px; width: 100%; }
+.table.collapsed tr.more { display: none; }
+@media (hover: none) { .gate-hint { display: none; } }
+@media (pointer: coarse) {
+  .top button, .pref { min-height: 44px; }
+  .pref { min-width: 44px; }
+  .pass button { min-height: 44px; }
+}
+@media (max-width: 640px) {
+  .top { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  main { padding: 20px max(16px, env(safe-area-inset-right)) calc(56px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  /* The section strip scrolls: fade its edges so the hidden sections read as more to the side */
+  nav { -webkit-mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 28px), transparent);
+        mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 28px), transparent); }
+  .page-head { margin-bottom: 18px; padding-bottom: 14px; }
+  .page-head h1 { font-size: 1.75rem; }
+  .sign-tile { width: 36px; height: 36px; }
+  .sign-tile .ico { width: 24px; height: 24px; }
+
+  /* Records with a plate: the plate on the left, the details beside it */
+  .compact tr { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; row-gap: 0; align-items: center; padding: 12px 0 11px; }
+  .compact td { display: block; padding: 1px 0; font-size: .9rem; }
+  .compact td::before { display: none; }
+  .compact td[data-col="Plate"] { grid-column: 1; grid-row: 1 / span 6; padding: 0; }
+  .compact td:not([data-col="Plate"]) { grid-column: 2; }
+  .compact td[data-col="Time"], .compact td[data-col="Entered at"], .compact td[data-col="Valid until"], .compact td[data-col="Last seen"] { color: var(--muted); font-size: .82rem; }
+  td:empty { display: none; }
+
+  /* Visitor passes: plate and status on one line, day and cancel on the next */
+  .pass { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; }
+  .pass > .plate { grid-column: 1; grid-row: 1; }
+  .pass > .status { grid-column: 2; grid-row: 1; justify-self: end; }
+  .pass > span:not(.plate):not(.status):not(.pass-reason) { grid-column: 1; grid-row: 2; }
+  .pass > button { grid-column: 2; grid-row: 2; }
+  .pass > .pass-reason { grid-column: 1 / -1; }
+
+  /* Forms: the search button beside its field, filters on a two-column grid, rules full width */
+  #sform { flex-wrap: nowrap; }
+  #sform .grow { flex: 1 1 auto; min-width: 0; }
+  #lform { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  #lform .grow { grid-column: 1 / -1; }
+  #lform > * { min-width: 0; }
+  input[type="date"] { min-width: 0; }
+  .gate-hint { display: none; }
+  /* Records with actions keep their buttons on a full-width row under the plate and details */
+  .compact td.actions-cell { grid-column: 1 / -1; display: flex; gap: 8px; padding-top: 10px; }
+  .compact td.actions-cell button { flex: 1 1 0; margin: 0; }
+  #lform button { width: 100%; }
+  #settings { flex-direction: column; align-items: stretch; }
+  #settings button { align-self: flex-start; }
+  .result .row { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .result .row > button { width: 100%; }
+
+  /* Dialogs rise from the bottom edge, within thumb reach */
+  dialog { width: 100%; max-width: 100%; margin: auto 0 0; border-radius: 12px 12px 0 0; border-width: 1px 0 0;
+    padding: 22px 16px calc(16px + env(safe-area-inset-bottom)); }
+  dialog .actions { display: grid; grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
+  dialog[open] { animation: sheet-in .28s var(--ease-out); }
+}
+@keyframes sheet-in { from { transform: translateY(40px); opacity: .4; } }
+@media (max-width: 480px) {
+  /* The ADA mark names the service; the room goes to the role and the switches */
+  .brand-name { display: none; }
+}
+@media (max-width: 420px) {
+  .verdict-word { font-size: 1.9rem; }
+  .verdict-body p { font-size: .95rem; }
+}
 
 /* Printing My vehicle gives the permit alone, to place behind the windscreen */
 @media print {
