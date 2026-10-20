@@ -347,7 +347,7 @@ body[data-screen="login"] main { max-width: none; padding: 0; }
 .signin-submit { width: 100%; min-height: 48px; font-size: 1rem; }
 .signin-remember { display: inline-flex; align-items: center; gap: 9px; font-size: .9rem; cursor: pointer; color: var(--muted); }
 .signin-remember input { width: 16px; height: 16px; margin: 0 0 2px; }
-.signin-forgot { display: inline-block; margin: 4px 32px 28px; font-size: .95rem; font-weight: 600; }
+.signin-forgot { display: inline-block; margin: 0 32px 18px; padding: 10px 0; font-size: .95rem; font-weight: 600; }
 .login-err { background: var(--check-soft); color: var(--check); font-weight: 600; padding: 10px 12px 8px; border-radius: var(--r); }
 .login-err:empty { display: none; }
 
@@ -363,7 +363,7 @@ body[data-screen="login"] main { max-width: none; padding: 0; }
 .demo-name { font-weight: 600; line-height: 1.25; }
 .demo-id { grid-column: 1; font-size: .8rem; color: var(--muted); line-height: 1.3; }
 .demo-roles { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 15rem; }
-.demo-role { font-size: .75rem; font-weight: 600; white-space: nowrap; color: var(--navy-ink); background: var(--navy-soft); padding: 2px 7px 0; border-radius: 2px; }
+.demo-role { font-size: .8rem; font-weight: 600; white-space: nowrap; color: var(--navy-ink); background: var(--navy-soft); padding: 2px 7px 0; border-radius: 2px; }
 .demo-role.staff { color: #fff; background: var(--sign); }
 
 /* Toast and dialog: the only things that float */
@@ -446,7 +446,7 @@ dialog .actions { justify-content: flex-end; }
 .table.collapsed tr.more { display: none; }
 @media (hover: none) { .gate-hint { display: none; } }
 @media (pointer: coarse) {
-  .top button, .pref { min-height: 44px; }
+  .top button, .pref, .signin-prefs .pref { min-height: 44px; }
   .pref { min-width: 44px; }
   .pass button { min-height: 44px; }
 }
@@ -465,8 +465,17 @@ dialog .actions { justify-content: flex-end; }
   .compact tr { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; row-gap: 0; align-items: center; padding: 12px 0 11px; }
   .compact td { display: block; padding: 1px 0; font-size: .9rem; }
   .compact td::before { display: none; }
-  .compact td[data-col="Plate"] { grid-column: 1; grid-row: 1 / span 6; padding: 0; }
-  .compact td:not([data-col="Plate"]) { grid-column: 2; }
+  .compact td[data-col="Plate"], .compact td[data-col="Vehicle"]:has(> .plate) { grid-column: 1; grid-row: 1 / span 6; padding: 0; }
+  .compact td:not([data-col="Plate"]):not([data-col="Vehicle"]:has(> .plate)) { grid-column: 2; }
+  .compact td[data-col="Vehicle"]:has(> .plate) .sub { margin-top: 4px; font-size: .8rem; max-width: 9.5rem; }
+  /* Audit records: what happened and when on one line, who and the details under it */
+  .audit-records tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 12px 0 11px; }
+  .audit-records td { display: block; padding: 0; }
+  .audit-records td::before { display: none; }
+  .audit-records td[data-col="Action"] { grid-column: 1; grid-row: 1; font-weight: 600; }
+  .audit-records td[data-col="Time"] { grid-column: 2; grid-row: 1; color: var(--muted); font-size: .8rem; text-align: right; }
+  .audit-records td[data-col="Who"] { grid-column: 1 / -1; grid-row: 2; color: var(--muted); font-size: .88rem; }
+  .audit-records td[data-col="Details"] { grid-column: 1 / -1; grid-row: 3; }
   .compact td[data-col="Time"], .compact td[data-col="Entered at"], .compact td[data-col="Valid until"], .compact td[data-col="Last seen"] { color: var(--muted); font-size: .82rem; }
   td:empty { display: none; }
 
@@ -487,7 +496,7 @@ dialog .actions { justify-content: flex-end; }
   input[type="date"] { min-width: 0; }
   .gate-hint { display: none; }
   /* Records with actions keep their buttons on a full-width row under the plate and details */
-  .compact td.actions-cell { grid-column: 1 / -1; display: flex; gap: 8px; padding-top: 10px; }
+  .compact td.actions-cell { grid-column: 1 / -1 !important; display: flex; gap: 8px; padding-top: 10px; }
   .compact td.actions-cell button { flex: 1 1 0; margin: 0; }
   #lform button { width: 100%; }
   #settings { flex-direction: column; align-items: stretch; }
@@ -510,7 +519,7 @@ dialog .actions { justify-content: flex-end; }
 }
 @media (max-width: 420px) {
   .verdict-word { font-size: 1.9rem; }
-  .verdict-body p { font-size: .95rem; }
+  .verdict-body p:not(.verdict-word) { font-size: .95rem; }
 }
 
 /* Printing My vehicle gives the permit alone, to place behind the windscreen */

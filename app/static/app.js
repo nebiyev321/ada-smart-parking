@@ -393,9 +393,9 @@ const vehicleLine = (p, lg) => `<div class="vehicle">${plate(p.plate_display, lg
 // Column titles are English keys: data-col keeps the key for the phone layout's CSS, data-label carries the
 // translated title it shows. compact lays a record out as plate beside details on a phone; limit shows the
 // first rows and a "Show all" button.
-const table = (cols, rows, { compact = false, limit = 0 } = {}) => {
+const table = (cols, rows, { compact = false, limit = 0, kind = "" } = {}) => {
   const more = limit > 0 && rows.length > limit;
-  return `<div class="table${compact ? " compact" : ""}${more ? " collapsed" : ""}"><table>
+  return `<div class="table${compact ? " compact" : ""}${kind ? " " + kind : ""}${more ? " collapsed" : ""}"><table>
   <thead><tr>${cols.map(c => `<th scope="col">${esc(t(c))}</th>`).join("")}</tr></thead>
   <tbody>${rows.map((r, n) => `<tr${more && n >= limit ? ' class="more"' : ""}>${r.map((cell, i) => `<td data-col="${esc(cols[i])}" data-label="${esc(t(cols[i]))}"${i === r.length - 1 && cols[i] === "" ? ' class="actions-cell"' : ""}>${cell}</td>`).join("")}</tr>`).join("")}</tbody>
   </table></div>${more ? `<button type="button" class="ghost show-more" data-action="showMore">${esc(t("Show all ({n})", { n: rows.length }))}</button>` : ""}`;
@@ -561,7 +561,7 @@ const VIEWS = {
           r.renews_permit_id ? `${esc(t("Renewal"))}<span class="sub">${esc(t("Same vehicle, next term"))}</span>`
             : r.change_request_id ? `${esc(t("Vehicle change"))}<span class="sub">${esc(t("Replaces {plate}", { plate: r.replaces_plate }))}</span>` : esc(t("New registration")),
           decide("approve", "reject", `data-id="${r.permit_id}" data-name="${esc(r.full_name)}"`),
-        ]))
+        ]), { compact: true })
       : `<p class="muted">${esc(t("No permit requests are waiting. New registrations, vehicle changes and renewals appear here."))}</p>`}</section>`);
   },
 
@@ -587,7 +587,7 @@ const VIEWS = {
       <div class="ledger"><h2>${esc(t("Audit log"))}</h2>${rows.length ? table(["Time", "Who", "Action", "Details"], rows.map(r => [
         esc(fmt(r.created_at)), esc(r.actor || t("System")), esc(label(r.action)),
         `<span class="details">${esc([r.target_type ? `${label(r.target_type)} ${r.target_id}` : "", details(r.details)].filter(Boolean).join("; "))}</span>`,
-      ]), { limit: 30 }) : `<p class="muted">${esc(t("Nothing recorded yet."))}</p>`}</div>`;
+      ]), { limit: 30, kind: "audit-records" }) : `<p class="muted">${esc(t("Nothing recorded yet."))}</p>`}</div>`;
     $("#settings").onsubmit = async e => {
       e.preventDefault();
       const err = $("#settings + .err"); err.textContent = "";
