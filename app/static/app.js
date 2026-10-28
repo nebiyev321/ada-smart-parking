@@ -11,8 +11,17 @@ let me = null;
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const TZ = "Asia/Baku"; // campus time, whatever the device is set to
-// Dates on campus time. Azerbaijani names are built here: many browsers ship no Azerbaijani calendar data
+// Dates and times follow the site's clock, whatever the device is set to. The server says which offset (+04:00);
+// whole-hour offsets map to an Etc/GMT zone, which every browser knows (note the inverted sign).
+let TZ = "Etc/GMT-4";
+const zoneFor = offset => {
+  const m = /^([+-])(\d{2}):(\d{2})$/.exec(offset || "");
+  if (!m) return TZ;
+  if (m[3] !== "00") return offset;
+  const h = Number(m[2]);
+  return h ? `Etc/GMT${m[1] === "+" ? "-" : "+"}${h}` : "UTC";
+};
+// Dates on site time. Azerbaijani names are built here: many browsers ship no Azerbaijani calendar data
 // and would print "2027 M01 18".
 const AZ_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avqust", "sentyabr", "oktyabr", "noyabr", "dekabr"];
 const AZ_DAYS = ["B.", "B.e.", "Ç.a.", "Ç.", "C.a.", "C.", "Ş."];
@@ -33,18 +42,18 @@ const day = iso => {
   const p = parts(new Date(iso)); return `${p.d} ${AZ_MONTHS[p.m]} ${p.y}`;
 };
 const time = iso => parts(new Date(iso)).hm;
-// Calendar dates (YYYY-MM-DD) as campus sees them.
-const campusDay = (offset = 0) => new Date(Date.now() + offset * 864e5).toLocaleDateString("en-CA", { timeZone: TZ });
+// Calendar dates (YYYY-MM-DD) as the site sees them.
+const siteDay = (offset = 0) => new Date(Date.now() + offset * 864e5).toLocaleDateString("en-CA", { timeZone: TZ });
 const dayOf = ymd => {
-  if (ymd === campusDay()) return t("Today");
-  if (ymd === campusDay(1)) return t("Tomorrow");
+  if (ymd === siteDay()) return t("Today");
+  if (ymd === siteDay(1)) return t("Tomorrow");
   const date = new Date(ymd + "T12:00:00Z");
   if (LANG !== "az") return date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
   const p = parts(date, "UTC"); return `${AZ_DAYS[p.weekday]}, ${p.d} ${AZ_MONTHS[p.m].slice(0, 3)}`;
 };
 const words = s => String(s ?? "").replaceAll("_", " ");
 const cap = s => s ? s[0].toUpperCase() + s.slice(1) : "";
-// Server codes (student, parking_admin, permit_approved) shown as words in the interface language.
+// Server codes (member, parking_admin, permit_approved) shown as words in the interface language.
 const label = code => t(cap(words(code)));
 
 const STATUS = { active: "Active", pending: "Waiting for approval", rejected: "Rejected", suspended: "Suspended", expired: "Expired", inactive: "Replaced" };
@@ -92,7 +101,7 @@ const ICONS = {
   gate: '<path d="M5 21V5M2.5 21h5M5 7.5h16v5H5zM11 7.5l-2.5 5M17 7.5l-2.5 5"/>',
   search: '<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5"/>',
   queue: '<path d="M4 4.5h16v15H4zM8 12l3 3 5-6"/>',
-  campus: '<path d="M4 4h16v16H4zM10 17V7h3.5a3 3 0 0 1 0 6H10"/>',
+  site: '<path d="M4 4h16v16H4zM10 17V7h3.5a3 3 0 0 1 0 6H10"/>',
   log: '<path d="M7 20V4M3.5 7.5 7 4l3.5 3.5M17 4v16M13.5 16.5 17 20l3.5-3.5"/>',
   audit: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
   in: '<path d="M14 4h5v16h-5M3 12h11.5M10.5 8l4 4-4 4"/>',
@@ -102,6 +111,8 @@ const ICONS = {
   moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
   print: '<path d="M7 9V3.5h10V9M7 17H4.5V9.5h15V17H17M7 14h10v6.5H7z"/>',
+  eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+  "eye-off": '<path d="M9.9 6A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-2.6 3.4M6.5 7.6A16.6 16.6 0 0 0 2.5 12S6 18.5 12 18.5a9 9 0 0 0 4.6-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2M3.5 3.5l17 17"/>',
 };
 const icon = name => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
 
@@ -109,7 +120,7 @@ const icon = name => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${
 const darkNow = () => document.documentElement.dataset.theme
   ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
 function syncThemeColor() {
-  document.querySelectorAll('meta[name="theme-color"]').forEach(m => { m.content = darkNow() ? "#0d2f70" : "#0b3d91"; });
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => { m.content = darkNow() ? "#0b1220" : "#ffffff"; });
 }
 // The display controls sit in the sign band when signed in and above the panel on sign-in.
 const prefsButtons = () => {
@@ -232,7 +243,7 @@ const ADMINS = ["parking_admin", "system_admin"];
 const TABS = [
   { id: "vehicle", label: "My vehicle", icon: "vehicle", show: () => true },
   { id: "gate", label: "Gate check", icon: "gate", show: () => has(...STAFF) },
-  { id: "campus", label: "On campus", icon: "campus", show: () => has(...STAFF) },
+  { id: "site", label: "On site", icon: "site", show: () => has(...STAFF) },
   { id: "search", label: "Find a vehicle", icon: "search", show: () => has(...STAFF) },
   { id: "queue", label: "Approvals", icon: "queue", show: () => has(...STAFF) },
   { id: "log", label: "Gate log", icon: "log", show: () => has(...STAFF) },
@@ -258,6 +269,7 @@ async function render({ enter = false } = {}) {
 
 async function renderApp(seq, enter) {
   try { me = await api("/me"); } catch (e) { if (token) showError(e); return; }
+  TZ = zoneFor(me.site_utc_offset);
   if (seq !== renderSeq) return;
   delete document.body.dataset.screen;
   $("#who").innerHTML = `<span class="person">${esc(me.user.full_name)}</span>
@@ -270,7 +282,7 @@ async function renderApp(seq, enter) {
   const nav = $("#nav"); nav.hidden = tabs.length < 2;
   nav.innerHTML = tabs.map(tab => `<a href="#${tab.id}"${tab.id === current ? ' aria-current="page"' : ""}>${icon(tab.icon)}${esc(t(tab.label))}</a>`).join("");
   showTab(nav);
-  document.title = `${t(tabs.find(tab => tab.id === current).label)} · ADA Smart Parking`;
+  document.title = `${t(tabs.find(tab => tab.id === current).label)} · Smart Parking`;
   try { await VIEWS[current](); } catch (e) { if (seq === renderSeq) showError(e); }
   if (enter && seq === renderSeq) replay($("#view"), "enter");
 }
@@ -304,7 +316,7 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
 });
 
 async function renderLogin() {
-  $("#who").innerHTML = ""; $("#nav").hidden = true; document.title = `${t("Sign in")} · ADA Smart Parking`;
+  $("#who").innerHTML = ""; $("#nav").hidden = true; document.title = `${t("Sign in")} · Smart Parking`;
   document.body.dataset.screen = "login";
   let users = null;
   try { users = await api("/auth/demo-users"); }
@@ -312,45 +324,60 @@ async function renderLogin() {
   const demos = (users || []).map(u => {
     const roles = (u.roles || "").split(",").filter(Boolean);
     const tags = roles.length ? roles.map(label) : [label(u.affiliation)];
-    return `<button type="button" class="demo" data-action="login" data-id="${esc(u.myada_user_id)}">
-      <span class="demo-name">${esc(u.full_name)}</span><span class="demo-id">${esc(u.myada_user_id)}</span>
+    return `<button type="button" class="demo" data-action="login" data-id="${esc(u.account_id)}">
+      <span class="demo-name">${esc(u.full_name)}</span><span class="demo-id">${esc(u.account_id)}</span>
       <span class="demo-roles">${tags.map(tag => `<span class="demo-role${roles.length ? " staff" : ""}">${esc(tag)}</span>`).join("")}</span></button>`;
   }).join("");
   $("#view").innerHTML = `<div class="signin">
     <div class="signin-prefs">${prefsButtons()}</div>
     <div class="signin-panel">
-      <div class="signin-sign">
-      <svg class="signin-mark" viewBox="0 -18 312 219" role="img" aria-label="${esc(t("ADA University"))}">
-        <defs><path id="mark-arc" d="M 33 132 A 128 128 0 0 1 289 132"/></defs>
-        <text dominant-baseline="middle"><textPath href="#mark-arc" startOffset="47%" text-anchor="end">UNİVERSİTET</textPath></text>
-        <text dominant-baseline="middle"><textPath href="#mark-arc" startOffset="53%" text-anchor="start">UNIVERSITY</textPath></text>
-        <image href="/static/ada-mark.svg" width="312" height="201"/>
-      </svg>
-      <p class="signin-product">Smart Parking</p>
-      </div>
+      <div class="signin-brand"><img src="/static/mark.svg" alt="" width="40" height="40"><span>Smart Parking</span></div>
       <form id="login-form" class="signin-form" novalidate>
         <h1>${esc(t("Sign in"))}</h1>
-        <p class="signin-lede">${esc(t("Use your MyADA username and password."))}</p>
-        <div class="login-err" role="alert"></div>
-        <label class="field" for="login-user"><span>${esc(t("Username"))}</span>
-        <input id="login-user" name="username" type="text" autocomplete="username"
-          autocapitalize="none" autocorrect="off" spellcheck="false" required></label>
-        <label class="field" for="login-pass"><span>${esc(t("Password"))}</span>
-        <input id="login-pass" name="password" type="password" autocomplete="current-password"></label>
+        <p class="signin-lede">${esc(t("Use your organisation username and password."))}</p>
+        <div class="field"><label for="login-user"><span>${esc(t("Username"))}</span></label>
+        <input id="login-user" name="username" type="text" autocomplete="username" aria-describedby="login-err"
+          autocapitalize="none" autocorrect="off" spellcheck="false" required>
+        <p class="login-err" id="login-err" role="alert"></p></div>
+        <div class="field"><label for="login-pass"><span>${esc(t("Password"))}</span></label>
+        <div class="pass-box"><input id="login-pass" name="password" type="password" autocomplete="current-password">
+        <button type="button" class="pass-toggle" aria-controls="login-pass" aria-pressed="false"
+          aria-label="${esc(t("Show password"))}" title="${esc(t("Show password"))}">${icon("eye")}</button></div></div>
         <button type="submit" class="signin-submit">${esc(t("Sign in"))}</button>
         <label class="signin-remember"><input id="login-remember" type="checkbox"> ${esc(t("Remember me on this computer"))}</label>
       </form>
-      <a class="signin-forgot" href="https://online.ada.edu.az/password" target="_blank" rel="noopener">${esc(t("Forgot your password?"))}</a>
+      <p class="signin-help">${esc(t("Forgot your password? Your organisation's help desk can reset it."))}</p>
     </div>
     ${demos ? `<section class="demo-panel" aria-labelledby="stub-title">
       <p class="stub-label" id="stub-title"><strong>${esc(t("Prototype:"))}</strong> ${esc(t("sign in as a demo account"))}</p>
       <div class="demo-list">${demos}</div></section>` : ""}
   </div>`;
   const form = $("#login-form");
-  if (form) form.onsubmit = e => { e.preventDefault(); ACTIONS.login($(".signin-submit", form)).catch(x => { if (x.message !== "Signed out") loginError(x.message); }); };
+  if (!form) return;
+  // The submit button locks and shows its spinner like every other action, so a double press signs in once.
+  form.onsubmit = e => {
+    e.preventDefault();
+    const b = $(".signin-submit", form);
+    busy(b, () => ACTIONS.login(b)).catch(x => { if (x.message !== "Signed out") loginError(x.message); });
+  };
+  // Typing again clears a stale error.
+  $("#login-user").oninput = () => loginError("");
+  // Show or hide the password; the field keeps focus and the caret stays put.
+  const pass = $("#login-pass"), toggle = $(".pass-toggle", form);
+  toggle.onclick = () => {
+    const show = pass.type === "password", text = t(show ? "Hide password" : "Show password");
+    pass.type = show ? "text" : "password";
+    toggle.setAttribute("aria-pressed", String(show)); toggle.setAttribute("aria-label", text); toggle.title = text;
+    toggle.innerHTML = icon(show ? "eye-off" : "eye");
+  };
 }
 
-function loginError(msg) { const el = $(".login-err"); if (el) el.textContent = msg; }
+// The error sits under the username it is about and marks that field invalid.
+function loginError(msg) {
+  const el = $(".login-err"); if (el) el.textContent = msg;
+  const user = document.getElementById("login-user");
+  if (msg) user?.setAttribute("aria-invalid", "true"); else user?.removeAttribute("aria-invalid");
+}
 
 const vehicleForm = (id, submit) => `<form id="${id}" novalidate>
   <div class="grid">
@@ -403,15 +430,14 @@ const table = (cols, rows, { compact = false, limit = 0, kind = "" } = {}) => {
 // Phones and tablets: no hover. There the keyboard covers half the screen, so it opens only when asked.
 const canHover = () => matchMedia("(hover: hover)").matches;
 
-// The owner's permit as a sign: the plate on navy, the state lit beneath it.
+// The owner's permit as a card: the plate on the brand head, the state beneath it.
 const STRIP = { active: "allow", pending: "wait", suspended: "check", expired: "check", rejected: "check", inactive: "idle" };
-// Permit terms run to 30 June, so a term ending in the first half of a year is last year's academic year.
+// The permit head shows when it runs out, month and year, as on a card: "10/2027".
 const term = pm => {
   if (!pm?.valid_until) return "";
-  const end = new Date(pm.valid_until), y = end.getUTCFullYear();
-  return end.getUTCMonth() < 7 ? `${y - 1}/${String(y).slice(2)}` : `${y}/${String(y + 1).slice(2)}`;
+  const p = parts(new Date(pm.valid_until));
+  return `${String(p.m + 1).padStart(2, "0")}/${p.y}`;
 };
-const termOf = until => term({ valid_until: until });
 // Length is duration: the bar's fill is the share of the permit term still left.
 function validity(pm) {
   if (pm.status !== "active" || !pm.valid_from || !pm.valid_until) return "";
@@ -421,8 +447,8 @@ function validity(pm) {
     <progress max="100" value="${left}" aria-label="${esc(t("Time left on this permit"))}">${left}%</progress></div>`;
 }
 function permitTag(pm, note) {
-  const sign = `<div class="permit-sign"><div class="permit-top"><img src="/static/ada-mark.svg" alt="${esc(t("ADA University"))}" width="44" height="28">
-    <span>${esc(t("Parking permit"))}</span>${term(pm) ? `<span class="permit-term">${term(pm)}</span>` : ""}</div>
+  const sign = `<div class="permit-sign"><div class="permit-top"><img src="/static/mark.svg" alt="" width="28" height="28">
+    <span>${esc(t("Parking permit"))}</span>${term(pm) ? `<span class="permit-term"><small>${esc(t("Valid to"))}</small> ${term(pm)}</span>` : ""}</div>
     ${pm ? plate(pm.plate_display, true) : `<span class="plate-slot">${esc(t("No vehicle yet"))}</span>`}</div>`;
   if (!pm) return `<article class="permit empty">${sign}<div class="permit-body"><p>${note}</p></div></article>`;
   const kind = STRIP[pm.status] || "idle";
@@ -448,18 +474,18 @@ const VIEWS = {
     const rn = me.renewal, renewing = p && a && p.renews_permit_id === a.id;
     let tag, side = "";
     if (a) tag = permitTag(a, t("Valid until {date}", { date: `<strong>${esc(day(a.valid_until))}</strong>` }));
-    else if (p) tag = permitTag(p, esc(t("The parking office is reviewing your registration. You can't park on campus until it is approved.")));
+    else if (p) tag = permitTag(p, esc(t("The parking office is reviewing your registration. You can't park here until it is approved.")));
     else if (l?.status === "suspended") tag = permitTag(l, l.reason
       ? t("Suspended: {reason}. Contact the parking office to have it reinstated.", { reason: esc(l.reason) })
       : esc(t("Suspended. Contact the parking office to have it reinstated.")));
     else {
       tag = l ? permitTag(l, esc(t(l.status === "expired" ? "This permit has expired." : "This permit is no longer valid.")) + (l.reason ? " " + t("Reason: {reason}.", { reason: esc(l.reason) }) : ""))
-        : permitTag(null, esc(t("Register your vehicle to park on campus. Each ADA member can register one vehicle, and the parking office approves it.")));
+        : permitTag(null, esc(t("Register your vehicle to park here. Each member can register one vehicle, and the parking office approves it.")));
       side += `<section class="card"><h2>${esc(t(l ? "Register again" : "Register your vehicle"))}</h2>${vehicleForm("reg", t("Register vehicle"))}</section>`;
     }
-    if (renewing) side += `<section class="card"><h2>${esc(t("Renewal"))}</h2><p class="notice">${esc(t("Your renewal for {term} is waiting for approval. Your current permit stays valid until {date}.", { term: termOf(rn.next_valid_until), date: day(a.valid_until) }))}</p></section>`;
+    if (renewing) side += `<section class="card"><h2>${esc(t("Renewal"))}</h2><p class="notice">${esc(t("Your renewal, running to {until}, is waiting for approval. Your current permit stays valid until {date}.", { until: day(rn.next_valid_until), date: day(a.valid_until) }))}</p></section>`;
     else if (a && rn?.due && !p) side += `<section class="card"><h2>${esc(t("Renew your permit"))}</h2>
-      <p>${t("Your permit ends on {date}. Renew it for {term} with the same vehicle; the parking office approves it and your permit continues with no gap.", { date: `<strong>${esc(day(a.valid_until))}</strong>`, term: esc(termOf(rn.next_valid_until)) })}</p>
+      <p>${t("Your permit ends on {date}. Renew it to {until} with the same vehicle; the parking office approves it and your permit continues with no gap.", { date: `<strong>${esc(day(a.valid_until))}</strong>`, until: esc(day(rn.next_valid_until)) })}</p>
       <div class="actions"><button type="button" data-action="renew">${esc(t("Request renewal"))}</button></div></section>`;
     if (a && !renewing) {
       side += `<section class="card"><h2>${esc(t("Change vehicle"))}</h2>`;
@@ -469,11 +495,11 @@ const VIEWS = {
       side += `</section>`;
     }
     side += visitorPasses(passes);
-    if (msgs.length) side += `<section class="card"><h2>${esc(t("Messages from campus security"))}</h2><ul class="messages">${msgs.map(m => `<li class="message">
+    if (msgs.length) side += `<section class="card"><h2>${esc(t("Messages from site security"))}</h2><ul class="messages">${msgs.map(m => `<li class="message">
       <h3>${esc(t(m.subject))}</h3><span class="muted">${esc(m.sender)}, ${esc(fmt(m.created_at))}</span><p>${esc(tMessage(m.body))}</p></li>`).join("")}</ul></section>`;
     const moves = `<section class="ledger"><h2>${esc(t("My entries and exits"))}</h2>${events.length
       ? table(["Time", "Movement", "Plate"], events.map(e => [esc(fmt(e.occurred_at)), esc(t(e.direction === "in" ? "Entered" : "Left")), plate(e.plate_display)]), { compact: true, limit: 8 })
-      : `<p class="muted">${esc(t("Your entries and exits appear here once you drive through a campus gate."))}</p>`}</section>`;
+      : `<p class="muted">${esc(t("Your entries and exits appear here once you drive through a gate."))}</p>`}</section>`;
     // With nothing else beside the permit, the movements fill that column instead of leaving it empty.
     const html = page("My vehicle") + `<div class="owner"><div class="owner-tag">${tag}</div><div class="owner-side">${side || moves}</div></div>` + (side ? moves : "");
     $("#view").innerHTML = html;
@@ -487,10 +513,10 @@ const VIEWS = {
     });
   },
 
-  async campus() {
-    const { inside, visitors_today: guests } = await api("/admin/on-campus");
+  async site() {
+    const { inside, visitors_today: guests } = await api("/admin/on-site");
     const flagged = inside.filter(c => c.overnight || !c.authorized).length;
-    $("#view").innerHTML = page("On campus", `<span class="page-count">${esc(inside.length ? t("{n} inside", { n: inside.length }) + (flagged ? t(", {n} to check", { n: flagged }) : "") : t("No cars inside"))}</span>`)
+    $("#view").innerHTML = page("On site", `<span class="page-count">${esc(inside.length ? t("{n} inside", { n: inside.length }) + (flagged ? t(", {n} to check", { n: flagged }) : "") : t("No cars inside"))}</span>`)
       + `<section class="ledger"><h2>${esc(t("Inside now"))}</h2>${inside.length
         ? table(["Entered at", "Plate", "Driver", "Note"], inside.map(c => [
             esc(c.overnight ? fmt(c.entered_at) : t("Today, {time}", { time: time(c.entered_at) })), plate(c.plate_display),
@@ -503,7 +529,7 @@ const VIEWS = {
             plate(v.plate_display), esc(v.guest_name || t("Not given")), esc(v.host),
             v.inside ? `<span class="status s-active">${esc(t("Inside"))}</span>` : v.arrived ? esc(t("Left")) : `<span class="muted">${esc(t("Not arrived"))}</span>`,
           ]), { compact: true })
-        : `<p class="muted">${esc(t("No visitor passes for today. ADA members issue them from My vehicle."))}</p>`}</section>`;
+        : `<p class="muted">${esc(t("No visitor passes for today. Members issue them from My vehicle."))}</p>`}</section>`;
   },
 
   async gate() {
@@ -550,7 +576,7 @@ const VIEWS = {
           `${esc(v.host)}<span class="sub">${esc(label(v.host_affiliation))}</span>`,
           decide("approvePass", "rejectPass", `data-id="${v.id}" data-plate="${esc(v.plate_display)}"`),
         ]), { compact: true })
-      : `<p class="muted">${esc(t("No visitor passes are waiting. Passes ADA members ask for appear here."))}</p>`}</section>`;
+      : `<p class="muted">${esc(t("No visitor passes are waiting. Passes members ask for appear here."))}</p>`}</section>`;
     $("#view").innerHTML = page("Approvals", `<span class="page-count">${esc(waiting ? t("{n} waiting", { n: waiting }) : t("Nothing waiting"))}</span>`
       + (renewals ? `<button type="button" data-action="approveRenewals">${esc(t("Approve all renewals ({n})", { n: renewals }))}</button>` : ""))
       + visitors + (!admin ? "" : `<section class="ledger"><h2>${esc(t("Permits"))}</h2>${rows.length
@@ -580,10 +606,12 @@ const VIEWS = {
   async audit() {
     const [rows, rules] = await Promise.all([api("/admin/audit-log"), api("/admin/settings")]);
     $("#view").innerHTML = page("Audit and settings") + `<div class="card"><h2>${esc(t("Rules"))}</h2>
-      <form id="settings" class="row" novalidate>
+      <form id="settings" class="grid settings-grid" novalidate>
         <label class="field"><span>${esc(t("Days between vehicle changes"))}</span><input name="days" type="number" min="0" max="365" required value="${rules.change_cooldown_days}"></label>
         <label class="field"><span>${esc(t("Renewal opens, days before a permit ends"))}</span><input name="renew" type="number" min="1" max="365" required value="${rules.renewal_window_days}"></label>
-        <button type="submit">${esc(t("Save"))}</button></form><div class="err" role="alert"></div></div>
+        <label class="field"><span>${esc(t("Permit length, days"))}</span><input name="term" type="number" min="1" max="3650" required value="${rules.permit_term_days}"></label>
+        <label class="field"><span>${esc(t("Or end every permit on"))}</span><input name="fixed" placeholder="MM-DD" maxlength="5" autocomplete="off" pattern="\\d{2}-\\d{2}" value="${esc(rules.permit_fixed_end)}"><small>${esc(t("For example 06-30 for an academic year. Leave empty to use the length."))}</small></label>
+        <div class="actions"><button type="submit">${esc(t("Save"))}</button></div></form><div class="err" role="alert"></div></div>
       <div class="ledger"><h2>${esc(t("Audit log"))}</h2>${rows.length ? table(["Time", "Who", "Action", "Details"], rows.map(r => [
         esc(fmt(r.created_at)), esc(r.actor || t("System")), esc(label(r.action)),
         `<span class="details">${esc([r.target_type ? `${label(r.target_type)} ${r.target_id}` : "", details(r.details)].filter(Boolean).join("; "))}</span>`,
@@ -594,8 +622,11 @@ const VIEWS = {
       const days = Number(e.target.elements.days.value), renew = Number(e.target.elements.renew.value);
       if (!Number.isInteger(days) || days < 0 || days > 365) { err.textContent = t("Days between vehicle changes: enter a whole number from 0 to 365."); return; }
       if (!Number.isInteger(renew) || renew < 1 || renew > 365) { err.textContent = t("Renewal window: enter a whole number of days from 1 to 365."); return; }
+      const termDays = Number(e.target.elements.term.value), fixed = e.target.elements.fixed.value.trim();
+      if (!Number.isInteger(termDays) || termDays < 1 || termDays > 3650) { err.textContent = t("Permit length: enter a whole number of days from 1 to 3650."); return; }
+      if (fixed && !/^\d{2}-\d{2}$/.test(fixed)) { err.textContent = t("Fixed end date: use month and day, like 06-30, or leave it empty."); return; }
       await busy($("#settings button"), async () => {
-        try { await api("/admin/settings", { method: "PUT", body: { change_cooldown_days: days, renewal_window_days: renew } }); toast(t("Rules saved")); render(); }
+        try { await api("/admin/settings", { method: "PUT", body: { change_cooldown_days: days, renewal_window_days: renew, permit_term_days: termDays, permit_fixed_end: fixed } }); toast(t("Rules saved")); render(); }
         catch (x) { err.textContent = x.message; }
       });
     };
@@ -625,11 +656,11 @@ function visitorPasses(passes) {
       <button type="button" class="ghost" data-action="revokePass" data-id="${v.id}" data-plate="${esc(v.plate_display)}">${esc(t("Cancel"))}</button></li>`).join("")}</ul>` : "";
   return `<section class="card"><h2>${esc(t("Visitor passes"))}</h2>
     <p class="muted">${esc(t(staff ? "Let a guest's car in for one day. You can ask for up to 3 passes for a day, up to 30 days ahead."
-      : "Let a guest's car in for one day. Campus security approves each pass before the visit. You can ask for up to 3 passes for a day, up to 30 days ahead."))}</p>${list}
+      : "Let a guest's car in for one day. Site security approves each pass before the visit. You can ask for up to 3 passes for a day, up to 30 days ahead."))}</p>${list}
     <form id="pass" novalidate><div class="grid">
       <label class="field"><span>${esc(t("Guest's plate"))}</span><input name="plate" placeholder="10-AB-123" required maxlength="16" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
       <label class="field"><span>${esc(t("Guest name (optional)"))}</span><input name="guest_name" maxlength="60" autocomplete="off"></label>
-      <label class="field"><span>${esc(t("Day"))}</span><input name="valid_on" type="date" required value="${campusDay()}" min="${campusDay()}" max="${campusDay(30)}"></label>
+      <label class="field"><span>${esc(t("Day"))}</span><input name="valid_on" type="date" required value="${siteDay()}" min="${siteDay()}" max="${siteDay(30)}"></label>
     </div><div class="actions"><button type="submit">${esc(t(staff ? "Issue pass" : "Request pass"))}</button></div><div class="err" role="alert"></div></form></section>`;
 }
 
@@ -664,7 +695,7 @@ async function recordGate(btn) {
   if (!value) { err.textContent = t("Type the plate number first."); replay($(".plate-input-box"), "nudge", 400); input.focus(); return; }
   await busy(btn, async () => {
     try {
-      // Campus has one gate; the service records it as "main".
+      // Manual checks are recorded at the "main" gate; ANPR and RFID devices name their own.
       const r = await api("/admin/gate-events", { method: "POST", body: { plate: value, direction: dir } });
       const from = $(".plate-input-box").getBoundingClientRect(), shown = r.plate_display || r.plate;
       const what = esc(t(dir === "in" ? "Entry recorded at {time}." : "Exit recorded at {time}.", { time: time(new Date().toISOString()) }));
@@ -675,7 +706,7 @@ async function recordGate(btn) {
              : `<p><strong>${esc(r.owner)}</strong>, ${esc(label(r.affiliation))}. ${esc(r.vehicle)}.</p>`}<p class="muted">${what}</p></div></div>`
         : `<div class="verdict check"><span class="verdict-tile">${icon("stop")}</span><div class="verdict-body"><p class="verdict-word">${esc(t("Check the driver"))}</p>
            <div class="vehicle">${plate(shown, true)}</div>
-           <p>${esc(t("No active permit or visitor pass for this plate. Ask for the driver's ADA ID before letting them in."))}</p>
+           <p>${esc(t("No active permit or visitor pass for this plate. Ask for the driver's ID before letting them in."))}</p>
            ${r.pending_pass ? `<p class="verdict-flag">${esc(t("{host} asked for a visitor pass for this plate today. It is waiting for approval.", { host: r.pending_pass.host }))}</p>
              <button type="button" class="verdict-action" data-action="approvePass" data-id="${r.pending_pass.id}" data-gate="1">${esc(t("Approve pass"))}</button>` : ""}
            ${r.repeat ? `<p class="verdict-flag">${repeatLine(r.repeat)}</p>` : ""}<p class="muted">${what}</p></div></div>`;
@@ -702,7 +733,7 @@ async function runSearch() {
     $("#sres").innerHTML = !rows.length && unknown ? unknown : (rows.length ? `<div class="card results">` + rows.map(r => `<article class="result">
       ${vehicleLine(r)}${r.repeat ? `<p class="flag">${repeatLine(r.repeat)}</p>` : ""}
       <p><strong>${esc(r.full_name)}</strong>, ${esc(label(r.affiliation))}${admin ? `<span class="sub">${esc(r.email)}${r.phone ? `, ${esc(r.phone)}` : ""}</span>` : ""}</p>
-      <p class="muted">${esc(r.last_event ? t(r.last_event.direction === "in" ? "Last entered campus on {date}." : "Last left campus on {date}.", { date: fmt(r.last_event.occurred_at) }) : t("No gate movements recorded."))}${r.valid_until && r.status === "active" ? " " + esc(t("Permit valid until {date}.", { date: day(r.valid_until) })) : ""}</p>
+      <p class="muted">${esc(r.last_event ? t(r.last_event.direction === "in" ? "Last entered on {date}." : "Last left on {date}.", { date: fmt(r.last_event.occurred_at) }) : t("No gate movements recorded."))}${r.valid_until && r.status === "active" ? " " + esc(t("Permit valid until {date}.", { date: day(r.valid_until) })) : ""}</p>
       ${admin ? `<div class="row">
         <label class="field"><span>${esc(t("Message"))}</span><select class="tpl" name="template">${templates}</select></label>
         <button type="button" class="ghost" data-action="contact" data-user="${r.user_id}" data-plate="${esc(r.plate_display)}" data-name="${esc(r.full_name)}">${esc(t("Send message"))}</button>
@@ -730,11 +761,11 @@ const ACTIONS = {
   async login(b) {
     const id = b.dataset.id || document.getElementById("login-user")?.value.trim();
     const user = document.getElementById("login-user");
-    if (!id) { loginError(t("Enter your username.")); user?.setAttribute("aria-invalid", "true"); user?.focus(); return; }
-    user?.removeAttribute("aria-invalid"); loginError("");
+    if (!id) { loginError(t("Enter your username.")); user?.focus(); return; }
+    loginError("");
     if (b.dataset.id) b.classList.add("picked");
     let r;
-    try { r = await api("/auth/mock-login", { method: "POST", body: { myada_user_id: id } }); }
+    try { r = await api("/auth/mock-login", { method: "POST", body: { account_id: id } }); }
     catch (x) { b.classList.remove("picked"); throw x; }
     token = r.token; setStore(token, !!document.getElementById("login-remember")?.checked);
     if (location.hash) history.replaceState(null, "", location.pathname);

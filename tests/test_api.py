@@ -32,8 +32,8 @@ def ctx(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "now", lambda: clock["t"])
     with TestClient(main.app) as client:
 
-        def login(myada_id):
-            tok = client.post("/api/v1/auth/mock-login", json={"myada_user_id": myada_id}).json()["token"]
+        def login(account_id):
+            tok = client.post("/api/v1/auth/mock-login", json={"account_id": account_id}).json()["token"]
             return {"Authorization": f"Bearer {tok}"}
 
         yield client, login, clock
@@ -43,7 +43,7 @@ CAR = {"plate": "10-AB-123", "make": "Toyota", "model": "Corolla", "color": "Whi
 CAR2 = {"plate": "90 XY 777", "make": "Kia", "model": "Rio", "color": "Grey"}
 
 
-def register_and_approve(client, login, who="S1001", car=CAR):
+def register_and_approve(client, login, who="M1001", car=CAR):
     r = client.post("/api/v1/vehicles", json=car, headers=login(who))
     assert r.status_code == 201, r.text
     pid = r.json()["id"]
@@ -61,39 +61,39 @@ def test_requires_sign_in(ctx):
 def test_register_approve_and_one_vehicle_limit(ctx):
     client, login, _ = ctx
     pid = register_and_approve(client, login)
-    me = client.get("/api/v1/me", headers=login("S1001")).json()
+    me = client.get("/api/v1/me", headers=login("M1001")).json()
     assert me["active_permit"]["id"] == pid
     assert me["active_permit"]["plate_normalized"] == "10AB123"
-    assert me["active_permit"]["valid_until"].startswith("2027-06-30")  # end of academic year
+    assert me["active_permit"]["valid_until"].startswith("2027-10-07")  # the default term: 365 days
     # Second registration is refused: only one active vehicle per person.
-    assert client.post("/api/v1/vehicles", json=CAR2, headers=login("S1001")).status_code == 409
+    assert client.post("/api/v1/vehicles", json=CAR2, headers=login("M1001")).status_code == 409
 
 
 def test_plate_cannot_belong_to_two_people(ctx):
     client, login, _ = ctx
     register_and_approve(client, login)
-    r = client.post("/api/v1/vehicles", json={**CAR, "plate": "10 ab 123"}, headers=login("S1002"))
+    r = client.post("/api/v1/vehicles", json={**CAR, "plate": "10 ab 123"}, headers=login("M1002"))
     assert r.status_code == 409
 
 
 def test_change_blocked_during_cooldown_then_allowed(ctx):
     client, login, clock = ctx
     register_and_approve(client, login)
-    r = client.post("/api/v1/change-requests", json=CAR2, headers=login("S1001"))
+    r = client.post("/api/v1/change-requests", json=CAR2, headers=login("M1001"))
     assert r.status_code == 409
     assert r.json()["detail"]["next_allowed_at"].startswith("2027-01-05")  # 90 days later
 
     clock["t"] += timedelta(days=91)
-    r = client.post("/api/v1/change-requests", json=CAR2, headers=login("S1001"))
+    r = client.post("/api/v1/change-requests", json=CAR2, headers=login("M1001"))
     assert r.status_code == 201, r.text
     new_pid = r.json()["permit"]["id"]
     # Old vehicle stays active while the change waits for approval.
-    me = client.get("/api/v1/me", headers=login("S1001")).json()
+    me = client.get("/api/v1/me", headers=login("M1001")).json()
     assert me["active_permit"]["plate_normalized"] == "10AB123"
     assert me["pending_permit"]["id"] == new_pid
 
     client.post(f"/api/v1/admin/permits/{new_pid}/approve", json={}, headers=login("E3002"))
-    me = client.get("/api/v1/me", headers=login("S1001")).json()
+    me = client.get("/api/v1/me", headers=login("M1001")).json()
     assert me["active_permit"]["plate_normalized"] == "90XY777"
     assert me["change"]["allowed_now"] is False  # cooldown restarts
 
@@ -101,22 +101,22 @@ def test_change_blocked_during_cooldown_then_allowed(ctx):
 def test_admin_override_allows_one_emergency_change(ctx):
     client, login, _ = ctx
     register_and_approve(client, login)
-    uid = client.get("/api/v1/me", headers=login("S1001")).json()["user"]["id"]
+    uid = client.get("/api/v1/me", headers=login("M1001")).json()["user"]["id"]
     r = client.post(f"/api/v1/admin/users/{uid}/cooldown-override", json={"reason": "Car sold"},
                     headers=login("E3002"))
     assert r.status_code == 201
-    assert client.post("/api/v1/change-requests", json=CAR2, headers=login("S1001")).status_code == 201
+    assert client.post("/api/v1/change-requests", json=CAR2, headers=login("M1001")).status_code == 201
 
 
 def test_rejected_change_keeps_old_vehicle(ctx):
     client, login, clock = ctx
     register_and_approve(client, login)
     clock["t"] += timedelta(days=100)
-    new_pid = client.post("/api/v1/change-requests", json=CAR2, headers=login("S1001")).json()["permit"]["id"]
+    new_pid = client.post("/api/v1/change-requests", json=CAR2, headers=login("M1001")).json()["permit"]["id"]
     assert client.post(f"/api/v1/admin/permits/{new_pid}/reject", json={}, headers=login("E3002")).status_code == 422
     client.post(f"/api/v1/admin/permits/{new_pid}/reject", json={"reason": "Document unreadable"},
                 headers=login("E3002"))
-    me = client.get("/api/v1/me", headers=login("S1001")).json()
+    me = client.get("/api/v1/me", headers=login("M1001")).json()
     assert me["active_permit"]["plate_normalized"] == "10AB123"
 
 
@@ -128,7 +128,7 @@ def test_guard_search_hides_contact_details_admin_sees_them(ctx):
     admin = client.get("/api/v1/admin/vehicles?plate=ab12", headers=login("E3002")).json()
     assert admin[0]["phone"]
     # Students cannot search.
-    assert client.get("/api/v1/admin/vehicles?plate=ab12", headers=login("S1002")).status_code == 403
+    assert client.get("/api/v1/admin/vehicles?plate=ab12", headers=login("M1002")).status_code == 403
 
 
 def test_gate_logging_and_authorization(ctx):
@@ -144,7 +144,7 @@ def test_gate_logging_and_authorization(ctx):
 
     log = client.get("/api/v1/admin/gate-events?plate=10AB", headers=g).json()
     assert [e["direction"] for e in log] == ["out", "in"]
-    mine = client.get("/api/v1/me/gate-events", headers=login("S1001")).json()
+    mine = client.get("/api/v1/me/gate-events", headers=login("M1001")).json()
     assert len(mine) == 2
     csv = client.get("/api/v1/admin/gate-events?format=csv", headers=g)
     assert csv.text.count("\n") == 4  # header + 3 events
@@ -162,22 +162,22 @@ def test_suspended_permit_is_not_authorized_at_gate(ctx):
 def test_permits_expire(ctx):
     client, login, clock = ctx
     register_and_approve(client, login)
-    clock["t"] = datetime(2027, 7, 1, tzinfo=timezone.utc)
+    clock["t"] = datetime(2027, 10, 8, tzinfo=timezone.utc)
     assert client.post("/api/v1/admin/jobs/expire", headers=login("E3003")).json()["expired"] == 1
-    me = client.get("/api/v1/me", headers=login("S1001")).json()
+    me = client.get("/api/v1/me", headers=login("M1001")).json()
     assert me["active_permit"] is None and me["latest_inactive_permit"]["status"] == "expired"
     # Expired users can register again.
-    assert client.post("/api/v1/vehicles", json=CAR, headers=login("S1001")).status_code == 201
+    assert client.post("/api/v1/vehicles", json=CAR, headers=login("M1001")).status_code == 201
 
 
 def test_contact_owner_and_audit(ctx):
     client, login, _ = ctx
     register_and_approve(client, login)
-    uid = client.get("/api/v1/me", headers=login("S1001")).json()["user"]["id"]
+    uid = client.get("/api/v1/me", headers=login("M1001")).json()["user"]["id"]
     r = client.post(f"/api/v1/admin/users/{uid}/contact", json={"template": "move", "plate": "10AB123"},
                     headers=login("E3002"))
     assert r.status_code == 201
-    msgs = client.get("/api/v1/me/messages", headers=login("S1001")).json()
+    msgs = client.get("/api/v1/me/messages", headers=login("M1001")).json()
     assert msgs[0]["subject"] == "Please move your vehicle"
     actions = [a["action"] for a in client.get("/api/v1/admin/audit-log", headers=login("E3003")).json()]
     assert "owner_contacted" in actions and "permit_approved" in actions
@@ -206,7 +206,7 @@ def test_malformed_tokens_are_rejected_not_crashing(ctx):
 
 def test_plate_and_text_fields_are_validated(ctx):
     client, login, _ = ctx
-    s = login("S1001")
+    s = login("M1001")
     for plate in ("10AB');alert(1)//", "<b>10AB</b>", "10--AB"):
         assert client.post("/api/v1/vehicles", json={**CAR, "plate": plate}, headers=s).status_code == 422
     assert client.post("/api/v1/vehicles", json={**CAR, "make": "<script>"}, headers=s).status_code == 422
@@ -216,7 +216,7 @@ def test_suspended_owner_cannot_register_around_suspension(ctx):
     client, login, _ = ctx
     pid = register_and_approve(client, login)
     client.post(f"/api/v1/admin/permits/{pid}/suspend", json={"reason": "Parking violation"}, headers=login("E3002"))
-    r = client.post("/api/v1/vehicles", json=CAR, headers=login("S1001"))
+    r = client.post("/api/v1/vehicles", json=CAR, headers=login("M1001"))
     assert r.status_code == 409 and "suspended" in r.json()["detail"]
 
 
@@ -224,7 +224,7 @@ def test_reinstate_refused_when_plate_now_belongs_to_someone_else(ctx):
     client, login, _ = ctx
     pid = register_and_approve(client, login)
     client.post(f"/api/v1/admin/permits/{pid}/suspend", json={"reason": "Car sold"}, headers=login("E3002"))
-    register_and_approve(client, login, who="S1002")  # new owner registers the same plate
+    register_and_approve(client, login, who="M1002")  # new owner registers the same plate
     r = client.post(f"/api/v1/admin/permits/{pid}/reinstate", json={}, headers=login("E3002"))
     assert r.status_code == 409
 
@@ -245,7 +245,7 @@ def test_demo_login_can_be_turned_off(ctx, monkeypatch):
 
     monkeypatch.setattr(main, "DEMO_LOGIN", False)
     assert client.get("/api/v1/auth/demo-users").status_code == 404
-    assert client.post("/api/v1/auth/mock-login", json={"myada_user_id": "E3003"}).status_code == 404
+    assert client.post("/api/v1/auth/mock-login", json={"account_id": "E3003"}).status_code == 404
 
 
 def test_api_docs_hidden_when_deployed(monkeypatch, tmp_path):
@@ -302,7 +302,7 @@ def test_parallel_requests_do_not_share_a_cursor(ctx):
     # The owner page loads gate events and messages at the same time.
     client, login, _ = ctx
     register_and_approve(client, login)
-    h = login("S1001")
+    h = login("M1001")
     from concurrent.futures import ThreadPoolExecutor
 
     paths = ["/api/v1/me/gate-events", "/api/v1/me/messages", "/api/v1/me"] * 30
@@ -316,9 +316,9 @@ def test_visitor_pass_lets_a_guest_in_for_that_day_only(ctx):
     g = login("E3001")
     today = "2026-10-07"
     r = client.post("/api/v1/visitor-passes", json={"plate": "77-zz-001", "guest_name": "Kamran", "valid_on": today},
-                    headers=login("S1001"))
+                    headers=login("M1001"))
     assert r.status_code == 201, r.text
-    mine = client.get("/api/v1/me/visitor-passes", headers=login("S1001")).json()[0]
+    mine = client.get("/api/v1/me/visitor-passes", headers=login("M1001")).json()[0]
     assert mine["plate_display"] == "77-ZZ-001" and mine["status"] == "pending"
     # Until a guard or admin approves it, the gate checks the car and says a pass is waiting.
     r = client.post("/api/v1/admin/gate-events", json={"plate": "77ZZ001", "direction": "in"}, headers=g).json()
@@ -337,7 +337,7 @@ def test_visitor_pass_lets_a_guest_in_for_that_day_only(ctx):
 
 def test_visitor_pass_rules(ctx):
     client, login, _ = ctx
-    owner = login("S1002")
+    owner = login("M1002")
     past = client.post("/api/v1/visitor-passes", json={"plate": "77ZZ001", "valid_on": "2026-10-06"}, headers=owner)
     assert past.status_code == 422
     for n in range(3):
@@ -347,7 +347,7 @@ def test_visitor_pass_rules(ctx):
     assert over.status_code == 409
     # Someone else's pass cannot be cancelled; your own can, and the gate then checks the car.
     pid = client.get("/api/v1/me/visitor-passes", headers=owner).json()[0]["id"]
-    assert client.post(f"/api/v1/visitor-passes/{pid}/revoke", headers=login("S1001")).status_code == 404
+    assert client.post(f"/api/v1/visitor-passes/{pid}/revoke", headers=login("M1001")).status_code == 404
     assert client.post(f"/api/v1/visitor-passes/{pid}/revoke", headers=owner).status_code == 200
     register_and_approve(client, login)
     taken = client.post("/api/v1/visitor-passes", json={"plate": "10AB123", "valid_on": "2026-10-08"}, headers=owner)
@@ -363,16 +363,20 @@ def test_on_campus_lists_cars_still_inside_and_flags_overnight(ctx):
     client.post("/api/v1/admin/gate-events", json={"plate": "77ZZ001", "direction": "out"}, headers=g)
     clock["t"] += timedelta(days=1)
     client.post("/api/v1/admin/gate-events", json={"plate": "55QQ555", "direction": "in"}, headers=g)
-    inside = client.get("/api/v1/admin/on-campus", headers=g).json()["inside"]
+    inside = client.get("/api/v1/admin/on-site", headers=g).json()["inside"]
     assert [(c["plate_display"], c["overnight"], c["authorized"]) for c in inside] == [
         ("10-AB-123", True, True), ("55QQ555", False, False)]
-    assert client.get("/api/v1/admin/on-campus", headers=login("S1001")).status_code == 403
+    assert client.get("/api/v1/admin/on-site", headers=login("M1001")).status_code == 403
 
 
 def test_renewal_opens_near_the_end_and_continues_the_permit(ctx):
     client, login, clock = ctx
+    # A site on an academic year: every permit ends on 30 June.
+    r = client.put("/api/v1/admin/settings", json={"change_cooldown_days": 90, "permit_fixed_end": "06-30"},
+                   headers=login("E3003"))
+    assert r.status_code == 200 and r.json()["permit_fixed_end"] == "06-30"
     pid = register_and_approve(client, login)
-    owner = login("S1001")
+    owner = login("M1001")
     assert client.get("/api/v1/me", headers=owner).json()["renewal"]["due"] is False
     assert client.post("/api/v1/me/renewal", headers=owner).status_code == 409
     clock["t"] = datetime(2027, 6, 10, tzinfo=timezone.utc)
@@ -383,7 +387,7 @@ def test_renewal_opens_near_the_end_and_continues_the_permit(ctx):
     assert queue[0]["renews_permit_id"] == pid
     assert client.post("/api/v1/admin/renewals/approve-all", headers=login("E3002")).json() == {"approved": 1, "skipped": 0}
     me = client.get("/api/v1/me", headers=owner).json()
-    # Next term runs to 30 June 2028 (23:59 in Baku), and the old permit is no longer the active one.
+    # Next term runs to 30 June 2028 (23:59 site time, +04:00), and the old permit is no longer the active one.
     assert me["active_permit"]["valid_until"] == "2028-06-30T19:59:59+00:00"
     assert me["active_permit"]["id"] != pid
     found = client.get("/api/v1/admin/vehicles?plate=10AB", headers=login("E3001")).json()
@@ -404,10 +408,10 @@ def test_repeat_entries_without_permit_are_flagged(ctx):
 
 def test_visitor_pass_approval_rules(ctx):
     client, login, _ = ctx
-    owner = login("S1002")
+    owner = login("M1002")
     pid = client.post("/api/v1/visitor-passes", json={"plate": "55QQ555", "valid_on": "2026-10-07"}, headers=owner).json()["id"]
     # Owners cannot approve; a reason is needed to reject; a decided pass cannot be decided again.
-    assert client.post(f"/api/v1/admin/visitor-passes/{pid}/approve", headers=login("S1001")).status_code == 403
+    assert client.post(f"/api/v1/admin/visitor-passes/{pid}/approve", headers=login("M1001")).status_code == 403
     assert client.post(f"/api/v1/admin/visitor-passes/{pid}/reject", json={}, headers=login("E3001")).status_code == 422
     r = client.post(f"/api/v1/admin/visitor-passes/{pid}/reject", json={"reason": "Event cancelled"}, headers=login("E3001"))
     assert r.json()["status"] == "rejected"
@@ -421,11 +425,11 @@ def test_visitor_pass_approval_rules(ctx):
 def test_all_registered_vehicles_list(ctx):
     client, login, _ = ctx
     register_and_approve(client, login)
-    client.post("/api/v1/vehicles", json=CAR2, headers=login("S1002"))
+    client.post("/api/v1/vehicles", json=CAR2, headers=login("M1002"))
     rows = client.get("/api/v1/admin/vehicles/all", headers=login("E3001")).json()
     assert [(r["plate_display"], r["status"]) for r in rows] == [("10-AB-123", "active"), ("90 XY 777", "pending")]
     assert "email" not in rows[0] and "phone" not in rows[0]
-    assert client.get("/api/v1/admin/vehicles/all", headers=login("S1001")).status_code == 403
+    assert client.get("/api/v1/admin/vehicles/all", headers=login("M1001")).status_code == 403
 
 
 # XSS regressions. The client escapes every value it puts into HTML; these tests pin the server-side
@@ -459,7 +463,7 @@ def test_page_shell_has_nothing_inline(ctx):
 def test_api_data_is_served_as_json_and_never_sniffed(ctx):
     client, login, _ = ctx
     register_and_approve(client, login)
-    for path, who in [("/api/v1/me", "S1001"), ("/api/v1/admin/vehicles/all", "E3001"), ("/api/v1/admin/gate-events", "E3001")]:
+    for path, who in [("/api/v1/me", "M1001"), ("/api/v1/admin/vehicles/all", "E3001"), ("/api/v1/admin/gate-events", "E3001")]:
         r = client.get(path, headers=login(who))
         assert r.headers["content-type"].startswith("application/json")
         assert r.headers["x-content-type-options"] == "nosniff"
@@ -472,19 +476,19 @@ def test_api_data_is_served_as_json_and_never_sniffed(ctx):
 
 def test_free_text_is_stored_verbatim_for_the_client_to_escape(ctx):
     client, login, _ = ctx
-    r = client.post("/api/v1/vehicles", json=CAR, headers=login("S1001"))
+    r = client.post("/api/v1/vehicles", json=CAR, headers=login("M1001"))
     client.post(f"/api/v1/admin/permits/{r.json()['id']}/reject", json={"reason": PROBE}, headers=login("E3002"))
-    me = client.get("/api/v1/me", headers=login("S1001")).json()
+    me = client.get("/api/v1/me", headers=login("M1001")).json()
     assert me["latest_inactive_permit"]["reason"] == PROBE
 
 
 def test_short_text_fields_reject_markup(ctx):
     client, login, _ = ctx
     bad_car = dict(CAR, make='<i data-xss-probe="1">')
-    assert client.post("/api/v1/vehicles", json=bad_car, headers=login("S1001")).status_code == 422
+    assert client.post("/api/v1/vehicles", json=bad_car, headers=login("M1001")).status_code == 422
     bad_pass = {"plate": "77ZZ001", "guest_name": "<i>", "valid_on": "2026-10-07"}
-    assert client.post("/api/v1/visitor-passes", json=bad_pass, headers=login("S1001")).status_code == 422
-    assert client.post("/api/v1/vehicles", json=dict(CAR, plate='10"><i>'), headers=login("S1001")).status_code == 422
+    assert client.post("/api/v1/visitor-passes", json=bad_pass, headers=login("M1001")).status_code == 422
+    assert client.post("/api/v1/vehicles", json=dict(CAR, plate='10"><i>'), headers=login("M1001")).status_code == 422
 
 
 def test_client_escape_helper_covers_html_and_attributes():
@@ -538,7 +542,65 @@ def test_every_interface_string_has_an_azerbaijani_translation():
     assert not missing, f"server messages with no Azerbaijani: {missing}"
 
     codes = set(re.findall(r'audit\([^,]+,\s*"([a-z_]+)"', server)) | {"visitor_pass_approved", "visitor_pass_rejected"}
-    codes |= {"student", "faculty", "staff", "guard", "parking_admin", "system_admin", "permit", "user", "change_request", "visitor_pass"}
+    codes |= {"member", "contractor", "staff", "guard", "parking_admin", "system_admin", "permit", "user", "change_request", "visitor_pass"}
     labels = {c.replace("_", " ").capitalize() for c in codes}
     missing = sorted(labels - keys)
     assert not missing, f"codes shown as words with no Azerbaijani: {missing}"
+
+
+def test_permit_length_is_a_setting(ctx):
+    client, login, _ = ctx
+    admin = login("E3003")
+    r = client.put("/api/v1/admin/settings", json={"change_cooldown_days": 90, "permit_term_days": 30}, headers=admin)
+    assert r.status_code == 200 and r.json()["permit_term_days"] == 30
+    register_and_approve(client, login)
+    me = client.get("/api/v1/me", headers=login("M1001")).json()
+    assert me["active_permit"]["valid_until"].startswith("2026-11-06")
+    # Not a real day, and 29 February, are refused; an empty value switches the fixed end off.
+    for bad in ("02-30", "13-01", "02-29"):
+        assert client.put("/api/v1/admin/settings", json={"change_cooldown_days": 90, "permit_fixed_end": bad},
+                          headers=admin).status_code == 422
+    assert client.put("/api/v1/admin/settings", json={"change_cooldown_days": 90, "permit_fixed_end": ""},
+                      headers=admin).json()["permit_fixed_end"] == ""
+    assert client.put("/api/v1/admin/settings", json={"change_cooldown_days": 90, "permit_term_days": 30},
+                      headers=login("E3002")).status_code == 403
+
+
+def test_campus_release_database_is_migrated(tmp_path, monkeypatch):
+    """A database from the campus-only release (myada_user_id, student/faculty) keeps its people and permits."""
+    if os.environ.get("PARKING_TEST_DATABASE_URL"):
+        pytest.skip("SQLite migration")
+    import importlib
+    import sqlite3
+
+    path = tmp_path / "old.db"
+    old = sqlite3.connect(path)
+    old.executescript("""
+        CREATE TABLE users (id INTEGER PRIMARY KEY, myada_user_id TEXT UNIQUE NOT NULL, full_name TEXT NOT NULL,
+            email TEXT NOT NULL, phone TEXT,
+            affiliation TEXT NOT NULL CHECK (affiliation IN ('student','faculty','staff')),
+            is_active INTEGER NOT NULL DEFAULT 1);
+        INSERT INTO users VALUES (1, 'S1001', 'Leyla Mammadova', 'lmammadova@ada.edu.az', NULL, 'student', 1);
+        INSERT INTO users VALUES (2, 'X9001', 'Someone Real', 'someone@example.org', NULL, 'faculty', 1);
+        CREATE TABLE vehicles (id INTEGER PRIMARY KEY, owner_id INTEGER NOT NULL REFERENCES users(id),
+            plate_display TEXT NOT NULL, plate_normalized TEXT NOT NULL, make TEXT NOT NULL, model TEXT NOT NULL,
+            color TEXT NOT NULL, created_at TEXT NOT NULL);
+        INSERT INTO vehicles VALUES (1, 1, '10-AB-123', '10AB123', 'Toyota', 'Corolla', 'White', '2026-01-01T00:00:00+00:00');
+    """)
+    old.commit()
+    old.close()
+    monkeypatch.setenv("PARKING_DB", str(path))
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    from app import db, main
+
+    importlib.reload(db)
+    importlib.reload(main)
+    with TestClient(main.app) as client:
+        tok = client.post("/api/v1/auth/mock-login", json={"account_id": "M1001"}).json()["token"]
+        me = client.get("/api/v1/me", headers={"Authorization": f"Bearer {tok}"}).json()
+    assert me["user"]["id"] == 1 and me["user"]["affiliation"] == "member"
+    c = sqlite3.connect(path)
+    assert c.execute("SELECT account_id, affiliation FROM users WHERE id=2").fetchone() == ("X9001", "member")
+    assert c.execute("SELECT owner_id FROM vehicles").fetchone() == (1,)
+    assert c.execute("PRAGMA foreign_key_check").fetchall() == []
+    c.close()

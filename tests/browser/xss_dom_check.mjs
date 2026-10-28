@@ -40,11 +40,11 @@ async function call(path, token, body, method = body ? "POST" : "GET") {
   if (!r.ok) throw new Error(`${method} ${path} -> ${r.status} ${await r.text()}`);
   return r.json();
 }
-const login = async id => (await call("/auth/mock-login", null, { myada_user_id: id })).token;
+const login = async id => (await call("/auth/mock-login", null, { account_id: id })).token;
 
 try {
   await waitFor(BASE + "/robots.txt");
-  const [owner, owner2, guard, admin, sysadmin] = await Promise.all(["S1001", "S1002", "E3001", "E3002", "E3003"].map(login));
+  const [owner, owner2, guard, admin, sysadmin] = await Promise.all(["M1001", "M1002", "E3001", "E3002", "E3003"].map(login));
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Baku" });
 
   // Stored fixtures, one per free-text field that accepts markup characters.

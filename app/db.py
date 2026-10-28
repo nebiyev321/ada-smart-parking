@@ -14,17 +14,21 @@ from contextvars import ContextVar
 DB_PATH = os.environ.get("PARKING_DB", os.path.join(os.path.dirname(__file__), "..", "parking.db"))
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS users (
+# The member groups a site can have. Groups are labels for admins; permit length comes from settings.
+GROUPS = ("member", "contractor", "staff")
+
+USERS_TABLE = """CREATE TABLE IF NOT EXISTS {name} (
     id INTEGER PRIMARY KEY,
-    myada_user_id TEXT UNIQUE NOT NULL,
+    account_id TEXT UNIQUE NOT NULL,
     full_name TEXT NOT NULL,
     email TEXT NOT NULL,
     phone TEXT,
-    affiliation TEXT NOT NULL CHECK (affiliation IN ('student','faculty','staff')),
+    affiliation TEXT NOT NULL CHECK (affiliation IN ('member','contractor','staff')),
     is_active INTEGER NOT NULL DEFAULT 1
 );
-CREATE TABLE IF NOT EXISTS staff_roles (
+"""
+
+SCHEMA = USERS_TABLE.format(name="users") + """CREATE TABLE IF NOT EXISTS staff_roles (
     user_id INTEGER NOT NULL REFERENCES users(id),
     role TEXT NOT NULL CHECK (role IN ('guard','parking_admin','system_admin')),
     PRIMARY KEY (user_id, role)
@@ -74,7 +78,7 @@ CREATE TABLE IF NOT EXISTS change_requests (
     decided_at TEXT,
     override_id INTEGER REFERENCES cooldown_overrides(id)
 );
--- A one-day pass for a guest's plate, issued by an ADA member (the host) or an admin.
+-- A one-day pass for a guest's plate, issued by a member (the host) or an admin.
 CREATE TABLE IF NOT EXISTS visitor_passes (
     id INTEGER PRIMARY KEY,
     host_id INTEGER NOT NULL REFERENCES users(id),
@@ -129,17 +133,22 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 """
 
-# Stand-in for the MyADA directory. In production these rows come from MyADA / SSO claims.
+# Stand-in for the organisation's directory. In production these rows come from the identity provider (SSO claims).
 DEMO_USERS = [
-    ("S1001", "Leyla Mammadova", "lmammadova@ada.edu.az", "+994 50 111 22 33", "student", []),
-    ("S1002", "Murad Aliyev", "maliyev@ada.edu.az", "+994 55 222 33 44", "student", []),
-    ("F2001", "Dr. Nigar Huseynova", "nhuseynova@ada.edu.az", "+994 51 333 44 55", "faculty", []),
-    ("E3001", "Rashad Karimov", "rkarimov@ada.edu.az", "+994 70 444 55 66", "staff", ["guard"]),
-    ("E3002", "Aysel Guliyeva", "aguliyeva@ada.edu.az", "+994 77 555 66 77", "staff", ["parking_admin"]),
-    ("E3003", "Tural Hasanov", "thasanov@ada.edu.az", "+994 50 666 77 88", "staff", ["system_admin", "parking_admin"]),
+    ("M1001", "Leyla Mammadova", "leyla.mammadova@example.com", "+994 50 111 22 33", "member", []),
+    ("M1002", "Murad Aliyev", "murad.aliyev@example.com", "+994 55 222 33 44", "member", []),
+    ("C2001", "Nigar Huseynova", "nigar.huseynova@example.com", "+994 51 333 44 55", "contractor", []),
+    ("E3001", "Rashad Karimov", "rashad.karimov@example.com", "+994 70 444 55 66", "staff", ["guard"]),
+    ("E3002", "Aysel Guliyeva", "aysel.guliyeva@example.com", "+994 77 555 66 77", "staff", ["parking_admin"]),
+    ("E3003", "Tural Hasanov", "tural.hasanov@example.com", "+994 50 666 77 88", "staff", ["system_admin", "parking_admin"]),
 ]
+# Demo accounts from the campus-only release, renamed in place so their permits and history carry over.
+RENAMED_DEMO_IDS = {"S1001": "M1001", "S1002": "M1002", "F2001": "C2001"}
 
-DEFAULT_SETTINGS = {"change_cooldown_days": "90", "renewal_window_days": "30"}
+# permit_fixed_end is "MM-DD" or empty: when set, every permit ends on the next such day (an academic year, a season)
+# instead of running permit_term_days.
+DEFAULT_SETTINGS = {"change_cooldown_days": "90", "renewal_window_days": "30",
+                    "permit_term_days": "365", "permit_fixed_end": ""}
 
 # Columns added after the first release. CREATE TABLE IF NOT EXISTS leaves existing tables alone,
 # so databases created before these columns existed get them here.
@@ -299,8 +308,45 @@ def tx(conn):
     return conn.transaction()
 
 
+# The campus-only release keyed users by myada_user_id and grouped them as student/faculty/staff.
+GROUP_FROM_CAMPUS = "CASE affiliation WHEN 'staff' THEN 'staff' ELSE 'member' END"
+
+
+def _migrate_sqlite_users(conn):
+    """SQLite cannot change a CHECK constraint in place, so the users table is rebuilt (SQLite's documented
+    12-step procedure). Foreign keys are off while it runs, so references to users stay intact."""
+    if "myada_user_id" not in {r["name"] for r in conn.execute("PRAGMA table_info(users)")}:
+        return
+    conn.execute("PRAGMA foreign_keys = OFF")
+    try:
+        conn.executescript(
+            "BEGIN;" + USERS_TABLE.format(name="users_new")
+            + f"""INSERT INTO users_new (id, account_id, full_name, email, phone, affiliation, is_active)
+                  SELECT id, myada_user_id, full_name, email, phone, {GROUP_FROM_CAMPUS}, is_active FROM users;
+                  DROP TABLE users;
+                  ALTER TABLE users_new RENAME TO users;
+                  COMMIT;"""
+        )
+    finally:
+        conn.execute("PRAGMA foreign_keys = ON")
+
+
+def _migrate_pg_users(conn):
+    if not conn.execute(
+        "SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='myada_user_id'"
+    ).fetchone():
+        return
+    conn.execute("ALTER TABLE users RENAME COLUMN myada_user_id TO account_id")
+    conn.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_affiliation_check")
+    conn.execute(f"UPDATE users SET affiliation = {GROUP_FROM_CAMPUS}")
+    groups = ",".join(f"'{g}'" for g in GROUPS)
+    conn.execute(f"ALTER TABLE users ADD CONSTRAINT users_affiliation_check CHECK (affiliation IN ({groups}))")
+
+
 def init(conn):
     pg = isinstance(conn, PostgresDatabase)
+    if not pg:
+        _migrate_sqlite_users(conn)
     with conn.session(), conn.transaction():
         if pg:
             # Serverless instances can cold-start together; only one creates the schema.
@@ -308,18 +354,25 @@ def init(conn):
             conn.executescript(SCHEMA.replace("id INTEGER PRIMARY KEY", "id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY"))
         else:
             conn.executescript(SCHEMA)
+        if pg:
+            _migrate_pg_users(conn)
         for table, column, decl in ADDED_COLUMNS:
             if pg:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {decl}")
             elif column not in {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
         insert, ignore = ("INSERT INTO", " ON CONFLICT DO NOTHING") if pg else ("INSERT OR IGNORE INTO", "")
-        for myada_id, name, email, phone, aff, roles in DEMO_USERS:
+        demo = {d[0]: d for d in DEMO_USERS}
+        for old_id, new_id in RENAMED_DEMO_IDS.items():
+            _, name, email, _, group, _ = demo[new_id]
+            conn.execute("UPDATE users SET account_id=?, full_name=?, email=?, affiliation=? WHERE account_id=?",
+                         (new_id, name, email, group, old_id))
+        for account_id, name, email, phone, group, roles in DEMO_USERS:
             conn.execute(
-                f"{insert} users (myada_user_id, full_name, email, phone, affiliation) VALUES (?,?,?,?,?){ignore}",
-                (myada_id, name, email, phone, aff),
+                f"{insert} users (account_id, full_name, email, phone, affiliation) VALUES (?,?,?,?,?){ignore}",
+                (account_id, name, email, phone, group),
             )
-            uid = conn.execute("SELECT id FROM users WHERE myada_user_id=?", (myada_id,)).fetchone()["id"]
+            uid = conn.execute("SELECT id FROM users WHERE account_id=?", (account_id,)).fetchone()["id"]
             for r in roles:
                 conn.execute(f"{insert} staff_roles (user_id, role) VALUES (?,?){ignore}", (uid, r))
         for k, v in DEFAULT_SETTINGS.items():

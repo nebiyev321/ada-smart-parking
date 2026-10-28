@@ -1,4 +1,4 @@
-"""ADA Smart Parking: MVP prototype of the Parking service that sits beside MyADA."""
+"""Smart Parking: a parking-permit, gate and visitor-pass service for any organisation's site."""
 import csv
 import hashlib
 import io
@@ -19,7 +19,20 @@ from . import db
 from .auth import DEMO_LOGIN, DEPLOYED, current_user, gate_device, issue_token, require
 
 STATIC = Path(__file__).parent / "static"
-BAKU = timezone(timedelta(hours=4))  # Azerbaijan has no daylight saving time
+
+
+def _site_zone(offset: str) -> timezone:
+    """The site's clock as a fixed UTC offset ("+04:00"), so dates and day passes follow the site, not the server."""
+    m = re.fullmatch(r"([+-])(\d{2}):(\d{2})", offset)
+    if not m:
+        raise RuntimeError(f"PARKING_UTC_OFFSET must look like +04:00, not {offset!r}")
+    delta = timedelta(hours=int(m[2]), minutes=int(m[3]))
+    return timezone(-delta if m[1] == "-" else delta)
+
+
+# Defaults to Azerbaijan (+04:00, no daylight saving time), where the service first ran.
+SITE_OFFSET = os.environ.get("PARKING_UTC_OFFSET", "+04:00")
+SITE_TZ = _site_zone(SITE_OFFSET)
 STAFF = ("guard", "parking_admin", "system_admin")
 ADMINS = ("parking_admin", "system_admin")
 # Letters and digits, optionally split by single spaces or hyphens: "10-AB-123", "90 XY 777".
@@ -37,13 +50,13 @@ def iso(dt: datetime) -> str:
     return dt.isoformat(timespec="seconds")
 
 
-def campus_today() -> date:
-    """Today's date on campus, whatever the server's clock zone."""
-    return now().astimezone(BAKU).date()
+def site_today() -> date:
+    """Today's date at the site, whatever the server's clock zone."""
+    return now().astimezone(SITE_TZ).date()
 
 
-def campus_midnight(day: date) -> str:
-    return iso(datetime(day.year, day.month, day.day, tzinfo=BAKU).astimezone(timezone.utc))
+def site_midnight(day: date) -> str:
+    return iso(datetime(day.year, day.month, day.day, tzinfo=SITE_TZ).astimezone(timezone.utc))
 
 
 def normalize_plate(plate: str) -> str:
@@ -64,7 +77,7 @@ async def lifespan(app: FastAPI):
 # Interactive API docs are for local development; a deployment opts in with PARKING_DOCS=1.
 DOCS = os.environ.get("PARKING_DOCS", "0" if DEPLOYED else "1") == "1"
 app = FastAPI(
-    title="ADA Smart Parking", version="0.1.0", lifespan=lifespan,
+    title="Smart Parking", version="0.1.0", lifespan=lifespan,
     docs_url="/docs" if DOCS else None, redoc_url="/redoc" if DOCS else None,
     openapi_url="/openapi.json" if DOCS else None,
 )
@@ -122,13 +135,18 @@ def setting(key: str) -> str:
     return conn().execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()["value"]
 
 
-def permit_end(affiliation: str, start: datetime) -> datetime:
-    """Students: end of the academic year (30 June, 23:59 in Baku). Faculty and staff: one year."""
-    if affiliation == "student":
-        local = start.astimezone(BAKU)  # 1 July 00:00 in Baku is still 30 June in UTC
-        year = local.year if local.month < 7 else local.year + 1
-        return datetime(year, 6, 30, 23, 59, 59, tzinfo=BAKU).astimezone(timezone.utc)
-    return start + timedelta(days=365)
+def permit_end(start: datetime) -> datetime:
+    """A permit runs permit_term_days from its start, or, when permit_fixed_end ("MM-DD") is set, to 23:59 site
+    time on the next such day: an academic year ending 30 June, a season, a lease."""
+    fixed = setting("permit_fixed_end")
+    if not fixed:
+        return start + timedelta(days=int(setting("permit_term_days")))
+    month, day_ = map(int, fixed.split("-"))
+    local = start.astimezone(SITE_TZ)  # 1 July 00:00 at a +04:00 site is still 30 June in UTC
+    end = datetime(local.year, month, day_, 23, 59, 59, tzinfo=SITE_TZ)
+    if end <= local:
+        end = end.replace(year=local.year + 1)
+    return end.astimezone(timezone.utc)
 
 
 def expire_permits() -> int:
@@ -183,21 +201,21 @@ def change_window(user_id: int):
     return now() >= next_at, iso(next_at), None
 
 
-# ---------------------------------------------------------------- mocked MyADA sign-in
+# ---------------------------------------------------------------- mocked sign-in
 
 class LoginIn(BaseModel):
-    myada_user_id: str = Field(max_length=32)
+    account_id: str = Field(max_length=32)
 
 
 def demo_login_enabled():
     if not DEMO_LOGIN:
-        raise HTTPException(404, "Demo sign-in is turned off. Sign in through MyADA.")
+        raise HTTPException(404, "Demo sign-in is turned off. Sign in with your organisation account.")
 
 
 @app.get("/api/v1/auth/demo-users", dependencies=[Depends(demo_login_enabled)])
 def demo_users():
     rows = conn().execute(
-        """SELECT u.myada_user_id, u.full_name, u.affiliation, GROUP_CONCAT(r.role) AS roles
+        """SELECT u.account_id, u.full_name, u.affiliation, GROUP_CONCAT(r.role) AS roles
            FROM users u LEFT JOIN staff_roles r ON r.user_id=u.id GROUP BY u.id ORDER BY u.id"""
     ).fetchall()
     return [dict(r) for r in rows]
@@ -205,10 +223,10 @@ def demo_users():
 
 @app.post("/api/v1/auth/mock-login", dependencies=[Depends(demo_login_enabled)])
 def mock_login(body: LoginIn):
-    user = conn().execute("SELECT id FROM users WHERE myada_user_id=?", (body.myada_user_id,)).fetchone()
+    user = conn().execute("SELECT id FROM users WHERE account_id=?", (body.account_id,)).fetchone()
     if not user:
-        raise HTTPException(404, "No such MyADA account")
-    return {"token": issue_token(body.myada_user_id)}
+        raise HTTPException(404, "No such account")
+    return {"token": issue_token(body.account_id)}
 
 
 # ---------------------------------------------------------------- vehicle owner
@@ -228,18 +246,17 @@ def renewal_state(user_id, active_id, pending_id):
     window = int(setting("renewal_window_days"))
     opens = datetime.fromisoformat(active["valid_until"]) - timedelta(days=window)
     pending = permit_view(pending_id)
-    affiliation = conn().execute("SELECT affiliation FROM users WHERE id=?", (user_id,)).fetchone()["affiliation"]
     return {
         "opens_at": iso(opens),
         "due": now() >= opens,
         "requested": bool(pending and pending["renews_permit_id"] == active_id),
-        "next_valid_until": iso(renewed_until(affiliation, active["valid_until"])),
+        "next_valid_until": iso(renewed_until(active["valid_until"])),
     }
 
 
-def renewed_until(affiliation: str, valid_until: str) -> datetime:
+def renewed_until(valid_until: str) -> datetime:
     """A renewal continues from the moment the current permit ends."""
-    return permit_end(affiliation, datetime.fromisoformat(valid_until) + timedelta(seconds=1))
+    return permit_end(datetime.fromisoformat(valid_until) + timedelta(seconds=1))
 
 
 @app.get("/api/v1/me")
@@ -256,8 +273,9 @@ def me(user=Depends(current_user)):
     allowed, next_at, override = change_window(uid)
     return {
         "renewal": renewal_state(uid, active and active["id"], pending and pending["id"]),
-        "user": {k: user[k] for k in ("id", "myada_user_id", "full_name", "email", "affiliation")},
+        "user": {k: user[k] for k in ("id", "account_id", "full_name", "email", "affiliation")},
         "roles": sorted(user["roles"]),
+        "site_utc_offset": SITE_OFFSET,
         "active_permit": permit_view(active and active["id"]),
         "pending_permit": permit_view(pending and pending["id"]),
         "latest_inactive_permit": permit_view(last and last["id"]),
@@ -275,7 +293,7 @@ def _create_vehicle_and_permit(c, user_id, body: VehicleIn):
     if len(plate_norm) < 3:
         raise HTTPException(422, "Plate number looks too short")
     if plate_taken(plate_norm, user_id):
-        raise HTTPException(409, "This plate is already registered to another ADA account")
+        raise HTTPException(409, "This plate is already registered to another account")
     ts = iso(now())
     vid = c.execute(
         """INSERT INTO vehicles (owner_id, plate_display, plate_normalized, make, model, color, created_at)
@@ -408,9 +426,9 @@ PASS_SELECT = """SELECT vp.id, vp.plate_display, vp.guest_name, vp.valid_on, vp.
 
 @app.post("/api/v1/visitor-passes", status_code=201)
 def issue_visitor_pass(body: VisitorPassIn, user=Depends(current_user)):
-    """Any ADA member can ask to let a guest's car in for a day. Guards or admins approve it first;
+    """Any member can ask to let a guest's car in for a day. Guards or admins approve it first;
     a pass they issue themselves is approved at once. Admins have no daily limit."""
-    today = campus_today()
+    today = site_today()
     if body.valid_on < today:
         raise HTTPException(422, "Pick today or a later date.")
     if body.valid_on > today + timedelta(days=PASS_DAYS_AHEAD):
@@ -454,7 +472,7 @@ def issue_visitor_pass(body: VisitorPassIn, user=Depends(current_user)):
 def my_visitor_passes(user=Depends(current_user)):
     rows = conn().execute(
         PASS_SELECT + " WHERE vp.host_id=? AND vp.valid_on>=? AND vp.revoked_at IS NULL ORDER BY vp.valid_on, vp.id",
-        (user["id"], campus_today().isoformat()),
+        (user["id"], site_today().isoformat()),
     ).fetchall()
     return [pass_view(r) for r in rows]
 
@@ -463,7 +481,7 @@ def my_visitor_passes(user=Depends(current_user)):
 def pending_visitor_passes(user=Depends(require(*STAFF))):
     rows = conn().execute(
         PASS_SELECT + " WHERE vp.status='pending' AND vp.revoked_at IS NULL AND vp.valid_on>=? ORDER BY vp.valid_on, vp.id",
-        (campus_today().isoformat(),),
+        (site_today().isoformat(),),
     ).fetchall()
     return [dict(pass_view(r), host_affiliation=r["host_affiliation"]) for r in rows]
 
@@ -476,7 +494,7 @@ def _decide_pass(pass_id: int, status: str, user, reason=None):
         raise HTTPException(409, "The host cancelled this pass")
     if vp["status"] != "pending":
         raise HTTPException(409, f"This pass was already {vp['status']}")
-    if vp["valid_on"] < campus_today().isoformat():
+    if vp["valid_on"] < site_today().isoformat():
         raise HTTPException(409, "This pass was for a day that has passed")
     with db.tx(conn()) as c:
         c.execute("UPDATE visitor_passes SET status=?, decided_by=?, decided_at=?, reason=? WHERE id=?",
@@ -600,13 +618,13 @@ def _record_gate_event(plate: str, direction: str, gate_id: str, source: str, re
     if not permit:
         visit = conn().execute(
             PASS_SELECT + " WHERE vp.plate_normalized=? AND vp.valid_on=? AND vp.revoked_at IS NULL AND vp.status=?",
-            (plate_norm, campus_today().isoformat(), "approved"),
+            (plate_norm, site_today().isoformat(), "approved"),
         ).fetchone()
     waiting = None
     if not permit and not visit:
         waiting = conn().execute(
             PASS_SELECT + " WHERE vp.plate_normalized=? AND vp.valid_on=? AND vp.revoked_at IS NULL AND vp.status=?",
-            (plate_norm, campus_today().isoformat(), "pending"),
+            (plate_norm, site_today().isoformat(), "pending"),
         ).fetchone()
     authorized = permit is not None or visit is not None
     # Show the plate as registered when we know it, so "10ab123" at the gate reads "10-AB-123" everywhere.
@@ -703,10 +721,10 @@ def list_gate_events(
     return rows
 
 
-@app.get("/api/v1/admin/on-campus")
-def on_campus(user=Depends(require(*STAFF))):
+@app.get("/api/v1/admin/on-site")
+def on_site(user=Depends(require(*STAFF))):
     """Cars whose latest movement is an entry, oldest first, plus today's expected visitors."""
-    today = campus_today()
+    today = site_today()
     rows = conn().execute(
         """SELECT g.plate_display, g.plate_normalized, g.occurred_at AS entered_at, g.authorized,
                   u.full_name AS owner, host.full_name AS visitor_of, vp.guest_name
@@ -716,7 +734,7 @@ def on_campus(user=Depends(require(*STAFF))):
            WHERE g.id IN (SELECT MAX(id) FROM gate_events GROUP BY plate_normalized) AND g.direction='in'
            ORDER BY g.occurred_at, g.id"""
     ).fetchall()
-    midnight = campus_midnight(today)
+    midnight = site_midnight(today)
     inside = [dict(r, authorized=bool(r["authorized"]), overnight=r["entered_at"] < midnight) for r in rows]
     inside_plates = {r["plate_normalized"] for r in inside}
     visitors = conn().execute(
@@ -778,19 +796,17 @@ def _approve_renewal(p, admin_id):
     old = conn().execute("SELECT * FROM permits WHERE id=?", (p["renews_permit_id"],)).fetchone()
     if old["status"] != "active":
         raise HTTPException(409, "The permit being renewed is no longer active. The person needs to register again.")
-    owner = conn().execute("SELECT affiliation FROM users WHERE id=?", (p["user_id"],)).fetchone()
     ts = iso(now())
     conn().execute("UPDATE permits SET status='inactive', reason='Renewed' WHERE id=?", (old["id"],))
     conn().execute(
         "UPDATE permits SET status='active', valid_from=?, valid_until=?, decided_by=?, decided_at=? WHERE id=?",
-        (old["valid_from"], iso(renewed_until(owner["affiliation"], old["valid_until"])), admin_id, ts, p["id"]),
+        (old["valid_from"], iso(renewed_until(old["valid_until"])), admin_id, ts, p["id"]),
     )
     audit(admin_id, "renewal_approved", "permit", p["id"], renews=old["id"])
 
 
 def _approve_new(p, admin_id, reason):
     permit_id = p["id"]
-    owner = conn().execute("SELECT affiliation FROM users WHERE id=?", (p["user_id"],)).fetchone()
     start = now()
     c = conn()
     cr = c.execute("SELECT * FROM change_requests WHERE new_permit_id=?", (permit_id,)).fetchone()
@@ -802,7 +818,7 @@ def _approve_new(p, admin_id, reason):
     c.execute(
         """UPDATE permits SET status='active', valid_from=?, valid_until=?, decided_by=?, decided_at=?, reason=?
            WHERE id=?""",
-        (iso(start), iso(permit_end(owner["affiliation"], start)), admin_id, iso(start), reason, permit_id),
+        (iso(start), iso(permit_end(start)), admin_id, iso(start), reason, permit_id),
     )
     audit(admin_id, "permit_approved", "permit", permit_id, change_request=cr and cr["id"])
 
@@ -867,7 +883,7 @@ def reinstate(permit_id: int, body: DecisionIn = DecisionIn(), user=Depends(requ
         raise HTTPException(409, "This person already has another active or pending permit")
     vehicle = conn().execute("SELECT plate_normalized FROM vehicles WHERE id=?", (p["vehicle_id"],)).fetchone()
     if plate_taken(vehicle["plate_normalized"], p["user_id"]):
-        raise HTTPException(409, "This plate is now registered to another ADA account")
+        raise HTTPException(409, "This plate is now registered to another account")
     with db.tx(conn()) as c:
         c.execute("UPDATE permits SET status='active', reason=? WHERE id=?", (body.reason, permit_id))
         audit(user["id"], "permit_reinstated", "permit", permit_id)
@@ -893,9 +909,9 @@ def grant_override(user_id: int, body: OverrideIn, user=Depends(require(*ADMINS)
 
 
 TEMPLATES = {
-    "move": ("Please move your vehicle", "Your vehicle {plate} needs to be moved. Please contact campus security."),
+    "move": ("Please move your vehicle", "Your vehicle {plate} needs to be moved. Please contact site security."),
     "incident": ("Your vehicle was involved in an incident",
-                 "Your vehicle {plate} was involved in an incident on campus. Please contact campus security."),
+                 "Your vehicle {plate} was involved in an incident on site. Please contact site security."),
     "lights": ("Your vehicle's lights are on", "The lights on your vehicle {plate} are on."),
 }
 
@@ -908,7 +924,7 @@ class ContactIn(BaseModel):
 
 @app.post("/api/v1/admin/users/{user_id}/contact", status_code=201)
 def contact_owner(user_id: int, body: ContactIn, user=Depends(require(*ADMINS))):
-    """Prototype stores the message (shown under the owner's messages); production sends email or a MyADA notice."""
+    """Prototype stores the message (shown under the owner's messages); production sends email or an in-app notice."""
     target = conn().execute("SELECT id, email FROM users WHERE id=?", (user_id,)).fetchone()
     if not target:
         raise HTTPException(404, "User not found")
@@ -935,23 +951,43 @@ def audit_log(user=Depends(require("system_admin"))):
 class SettingsIn(BaseModel):
     change_cooldown_days: int = Field(ge=0, le=365)
     renewal_window_days: Optional[int] = Field(default=None, ge=1, le=365)
+    permit_term_days: Optional[int] = Field(default=None, ge=1, le=3650)
+    # "MM-DD" for a fixed yearly end date, or "" to use permit_term_days.
+    permit_fixed_end: Optional[str] = Field(default=None, pattern=r"^(\d{2}-\d{2})?$")
+
+
+def _check_fixed_end(value: str):
+    """Any real calendar day except 29 February, which most years do not have."""
+    if not value:
+        return
+    try:
+        date(2025, *map(int, value.split("-")))
+    except ValueError:
+        raise HTTPException(422, "Pick a real day of the year for the fixed end date.")
+
+
+def rules():
+    return {"change_cooldown_days": int(setting("change_cooldown_days")),
+            "renewal_window_days": int(setting("renewal_window_days")),
+            "permit_term_days": int(setting("permit_term_days")),
+            "permit_fixed_end": setting("permit_fixed_end")}
 
 
 @app.put("/api/v1/admin/settings")
 def update_settings(body: SettingsIn, user=Depends(require("system_admin"))):
+    if body.permit_fixed_end is not None:
+        _check_fixed_end(body.permit_fixed_end)
+    changed = {k: v for k, v in body.model_dump().items() if v is not None}
     with db.tx(conn()) as c:
-        c.execute("UPDATE settings SET value=? WHERE key='change_cooldown_days'", (str(body.change_cooldown_days),))
-        if body.renewal_window_days is not None:
-            c.execute("UPDATE settings SET value=? WHERE key='renewal_window_days'", (str(body.renewal_window_days),))
-        audit(user["id"], "settings_changed", change_cooldown_days=body.change_cooldown_days,
-              renewal_window_days=body.renewal_window_days)
-    return {"change_cooldown_days": body.change_cooldown_days, "renewal_window_days": int(setting("renewal_window_days"))}
+        for key, value in changed.items():
+            c.execute("UPDATE settings SET value=? WHERE key=?", (str(value), key))
+        audit(user["id"], "settings_changed", **changed)
+    return rules()
 
 
 @app.get("/api/v1/admin/settings")
 def read_settings(user=Depends(require("system_admin"))):
-    return {"change_cooldown_days": int(setting("change_cooldown_days")),
-            "renewal_window_days": int(setting("renewal_window_days"))}
+    return rules()
 
 
 @app.post("/api/v1/admin/jobs/expire")
@@ -975,7 +1011,7 @@ def _fingerprinted_index() -> str:
 INDEX_HTML = _fingerprinted_index()
 
 
-# An internal campus service: keep every page out of search engines.
+# An internal service: keep every page out of search engines.
 @app.get("/robots.txt")
 def robots():
     return PlainTextResponse("User-agent: *\nDisallow: /\n")

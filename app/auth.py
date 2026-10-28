@@ -1,8 +1,8 @@
-"""Mocked MyADA sign-in.
+"""Mocked sign-in.
 
 The prototype issues its own HMAC-signed token after the user picks a demo account.
-In production this module is replaced by OpenID Connect validation against ADA's SSO
-(or a signed JWT handed over by MyADA); the rest of the service only uses `current_user`.
+In production this module is replaced by OpenID Connect validation against the organisation's
+identity provider (or a signed JWT it hands over); the rest of the service only uses `current_user`.
 """
 import base64
 import hashlib
@@ -29,8 +29,8 @@ def _b64(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
 
 
-def issue_token(myada_user_id: str) -> str:
-    payload = _b64(json.dumps({"sub": myada_user_id, "exp": int(time.time()) + TOKEN_TTL}).encode())
+def issue_token(account_id: str) -> str:
+    payload = _b64(json.dumps({"sub": account_id, "exp": int(time.time()) + TOKEN_TTL}).encode())
     sig = _b64(hmac.new(SECRET, payload.encode(), hashlib.sha256).digest())
     return f"{payload}.{sig}"
 
@@ -55,12 +55,12 @@ def verify_token(token: str) -> str:
 
 def current_user(request: Request, authorization: str = Header(default="")):
     if not authorization.startswith("Bearer "):
-        raise HTTPException(401, "Sign in through MyADA first")
-    myada_id = verify_token(authorization[7:])
+        raise HTTPException(401, "Sign in first")
+    account_id = verify_token(authorization[7:])
     conn = request.app.state.conn
-    user = conn.execute("SELECT * FROM users WHERE myada_user_id=?", (myada_id,)).fetchone()
+    user = conn.execute("SELECT * FROM users WHERE account_id=?", (account_id,)).fetchone()
     if not user or not user["is_active"]:
-        raise HTTPException(403, "Account is not active in MyADA")
+        raise HTTPException(403, "This account is not active")
     roles = {r["role"] for r in conn.execute("SELECT role FROM staff_roles WHERE user_id=?", (user["id"],))}
     return {**dict(user), "roles": roles}
 
