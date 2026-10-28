@@ -177,11 +177,14 @@ button:disabled { cursor: not-allowed; }
 .plate::before, .plate-input-box::before { content: ""; position: absolute; inset: var(--edge); border: var(--strip) solid #111;
   border-radius: calc(var(--u) * 10); pointer-events: none; }
 .plate-side { position: absolute; inset: 0; pointer-events: none; }
-.plate-flag { position: absolute; left: calc(var(--u) * 25); top: calc(var(--u) * 17); width: calc(var(--u) * 42); height: calc(var(--u) * 21);
+/* The flag and the AZ label snap to whole pixels, and the flag's height is three equal whole-pixel stripes,
+   so a 30px plate keeps crisp blue, red and green bands instead of smearing them into each other. */
+.plate-flag { position: absolute; left: round(calc(var(--u) * 25), 1px); top: round(calc(var(--u) * 17), 1px);
+  width: round(calc(var(--u) * 42), 1px); height: calc(max(2px, round(calc(var(--u) * 7), 1px)) * 3);
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 24' preserveAspectRatio='none'%3E%3Cpath fill='%2300b5e2' d='M0 0h48v8H0z'/%3E%3Cpath fill='%23ef3340' d='M0 8h48v8H0z'/%3E%3Cpath fill='%23509e2f' d='M0 16h48v8H0z'/%3E%3Ccircle cx='22.6' cy='12' r='3.4' fill='%23fff'/%3E%3Ccircle cx='23.5' cy='12' r='2.8' fill='%23ef3340'/%3E%3Cpath fill='%23fff' d='M26.9 10.4l.5 1.1 1.1-.5-.5 1.1 1.1.5-1.1.5.5 1.1-1.1-.5-.5 1.1-.5-1.1-1.1.5.5-1.1-1.1-.5 1.1-.5-.5-1.1 1.1.5z'/%3E%3C/svg%3E") center / 100% 100%; }
 /* RFID label (Figure 5 detail): white, thin black rounded outline, "AZ" 25 tall */
-.plate-az { position: absolute; left: calc(var(--u) * 16); bottom: calc(var(--u) * 17); width: calc(var(--u) * 58); height: calc(var(--u) * 44);
-  display: grid; place-items: center; background: #fff; color: #111; border: max(.75px, calc(var(--u) * 1.8)) solid #111; border-radius: calc(var(--u) * 9);
+.plate-az { position: absolute; left: round(calc(var(--u) * 16), 1px); bottom: round(calc(var(--u) * 17), 1px); width: round(calc(var(--u) * 58), 1px); height: round(calc(var(--u) * 44), 1px);
+  display: grid; place-items: center; background: #fff; color: #111; border: max(1px, round(calc(var(--u) * 1.8), 1px)) solid #111; border-radius: calc(var(--u) * 9);
   font: 500 calc(var(--u) * 34)/1 var(--plate-font); text-box: trim-both cap alphabetic; }
 .plate-num { display: inline-flex; align-items: center; font: 500 calc(var(--u) * 92)/1 var(--plate-font);
   white-space: nowrap; }
